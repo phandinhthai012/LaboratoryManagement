@@ -1,36 +1,29 @@
-# LaboratoryManagement
+# LaboratoryManagement (Frontend)
 
-Một hệ thống quản lý phòng thí nghiệm (Laboratory Management) để theo dõi thiết bị, đặt lịch sử dụng, quản lý người dùng và ghi nhận kết quả thí nghiệm.
+Ứng dụng Frontend cho hệ thống quản lý phòng thí nghiệm. Repository này chỉ chứa phần frontend; backend được triển khai trong một repository riêng sử dụng Java Spring Boot theo kiến trúc microservices.
 
 ## Tổng quan
 
-Repository này chứa mã nguồn cho ứng dụng LaboratoryManagement. Mục tiêu là cung cấp giao diện quản trị và các API backend để: 
-- Quản lý thiết bị và vật tư
-- Quản lý phòng và lịch đặt
-- Quản lý người dùng và phân quyền
-- Lưu trữ và tra cứu kết quả thí nghiệm
+Repository này chứa mã nguồn giao diện người dùng (frontend) cho LaboratoryManagement. Frontend giao tiếp với các microservices backend (Java Spring Boot) qua API (thường là một API Gateway hoặc các endpoint của các service).
 
-## Những điểm chính (Features)
+## Backend
 
-- Quản lý danh mục thiết bị (thêm/sửa/xóa)
-- Đặt lịch và quản lý phòng thí nghiệm
-- Phân quyền người dùng (admin, staff, student)
-- Ghi nhận kết quả và tải xuống báo cáo
+Backend không có trong repository này. Backend là một hệ thống microservices viết bằng Java Spring Boot và được lưu trữ ở repository riêng.  
+Nếu có, hãy thêm liên kết tới repository backend (ví dụ: https://github.com/your-org/laboratory-backend) để người dùng biết nơi chứa backend.
 
 ## Công nghệ (Tech Stack)
 
-- Backend: (ví dụ) Node.js / Express hoặc Django / Flask (tùy theo code hiện tại)
-- Cơ sở dữ liệu: PostgreSQL / MySQL / MongoDB
-- Frontend: React / Vue / Angular (nếu có)
-- Công cụ hỗ trợ: Docker (tùy chọn), GitHub Actions CI/CD
+- Frontend: React 
+- Backend: Java Spring Boot (microservices) — repository riêng  
+- Quản lý gói: npm / yarn (tùy theo frontend)
 
-> Chú ý: Cập nhật chính xác stack theo mã nguồn hiện có trong repo (kiểm tra package.json, requirements.txt hoặc file cấu hình tương tự).
+> Ghi chú: Mình chưa kiểm tra cấu trúc file trong repo — sẽ cập nhật chính xác stack và lệnh cài đặt sau khi xem package.json hoặc tệp cấu hình tương tự.
 
-## Yêu cầu (Requirements)
+## Biến môi trường quan trọng
 
-- Node.js >= 14 hoặc Python >= 3.8 (tùy vào ngôn ngữ dự án)
-- Docker (nếu muốn chạy trong container)
-- Database: PostgreSQL / MySQL hoặc MongoDB
+Frontend cần biết URL của backend (API). Ví dụ:
+- REACT_APP_API_BASE_URL (React) — trỏ tới API Gateway hoặc endpoint của backend
+
 
 ## Cài đặt và chạy (Local)
 
@@ -41,47 +34,50 @@ git clone https://github.com/phandinhthai012/LaboratoryManagement.git
 cd LaboratoryManagement
 ```
 
-2. Cài đặt phụ thuộc (ví dụ Node.js):
+2. Cài đặt phụ thuộc:
 
 ```bash
-# Nếu là Node.js
+# nếu dùng npm
 npm install
-# hoặc nếu dùng yarn
+
+# nếu dùng yarn
 yarn install
 ```
 
 3. Thiết lập biến môi trường:
 
-Tạo file `.env` từ `.env.example` (nếu có) và cập nhật thông tin DB, PORT, SECRET_KEY...
+Tạo file `.env` hoặc `.env.local` với biến REACT_APP_API_BASE_URL (hoặc tên tương ứng) trỏ tới backend.
 
-4. Khởi động ứng dụng:
+4. Chạy frontend:
 
 ```bash
-# Node.js
+# phát triển
 npm start
-# hoặc trong chế độ phát triển
+# hoặc
 npm run dev
 ```
 
 ## Cấu trúc đề xuất của repo
 
-- /backend - mã nguồn backend
-- /frontend - mã nguồn frontend
-- /docs - tài liệu và hướng dẫn
-- /scripts - script hỗ trợ (migration, seed)
+- /src - mã nguồn frontend  
+- /public - tài nguyên tĩnh  
+- /docs - tài liệu (tùy chọn)  
 
-(Cập nhật theo cấu trúc thực tế của repo.)
+(Điều chỉnh theo cấu trúc thực tế của repo.)
 
 ## Đóng góp (Contributing)
 
-Rất hoan nghênh PR, issue và đề xuất. Vui lòng: 
-1. Tạo issue mô tả tính năng hoặc lỗi
-2. Tạo PR nhỏ, rõ ràng với tiêu đề và mô tả chi tiết
+Rất hoan nghênh PR và issue. Vì backend nằm ở repo khác, khi gửi PR/issue liên quan tới API, vui lòng chỉ rõ:
+- URL API mà frontend mong đợi
+- Phiên bản contract (OpenAPI/Swagger) nếu có
 
 ## License
 
-Nếu chưa có file LICENSE, vui lòng thêm license phù hợp (MIT, Apache-2.0, ...).
+Thêm file LICENSE nếu cần (ví dụ MIT). Nếu bạn muốn, mình có thể tạo file LICENSE phù hợp.
 
 ## Liên hệ
 
-Nếu cần hỗ trợ thêm hoặc muốn mình cập nhật README theo mã nguồn thực tế, reply cho mình.
+Nếu muốn mình sẽ:
+- Cập nhật README để nêu chính xác framework frontend sau khi kiểm tra repo,  
+- Thêm liên kết đến repository backend nếu bạn cung cấp URL,  
+- Tạo `.env.example` và/hoặc file `LICENSE` nếu bạn muốn.
