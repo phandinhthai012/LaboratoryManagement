@@ -45,6 +45,9 @@ export const API_ENDPOINTS = {
         GET_PATIENT_BY_CODE: (patientCode) => `${API_PREFIX}/${api_patient}/code/${patientCode}`,
     },
     TESTORDER: {
+        // 01. Get All Patient's Test Orders
+        GET_ALL_TEST_ORDERS: `${API_PREFIX}/test-orders`,
+        GET_TEST_ORDER_BY_ID: (orderId) => `${API_PREFIX}/test-orders/${orderId}/full`,
         CREATE_TEST_ORDER: `${API_PREFIX}/test-orders`,
         // 02. View Detail Patient’s Test Order
         VIEW_DETAIL_TEST_ORDER: (orderId) => `${API_PREFIX}/test-orders/${orderId}`,
@@ -62,8 +65,6 @@ export const API_ENDPOINTS = {
         ADD_TEST_ORDER_ITEM: (orderId) => `${API_PREFIX}/test-orders/${orderId}/items`,
         // updateTestOrderByCode
         UPDATE_TEST_ORDER_BY_CODE: (orderCode) => `${API_PREFIX}/test-orders/${orderCode}`,
-        // getAllTestOrders
-        GET_ALL_TEST_ORDERS: `${API_PREFIX}/test-orders`,
         // updateTestOrderItem
         UPDATE_TEST_ORDER_ITEM: (orderId, itemId) => `${API_PREFIX}/test-orders/${orderId}/items/${itemId}`,
         // getAllTestCatalogs

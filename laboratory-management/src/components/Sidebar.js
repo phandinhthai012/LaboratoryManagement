@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifier } from '../contexts/NotifierContext';
 
-// sidebar component for ROLE_ADMIN, LAB_MANAGER, VIEWER, WATCHER
+// sidebar component for ROLE_ADMIN, ROLE_LAB_MANAGER, ROLE_LAB_USER, ROLE_SERVICE
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
@@ -56,8 +56,8 @@ const Sidebar = () => {
           >
             <FaTachometerAlt className="w-5 h-5" /> Trang chủ
           </div>
-          {/* Quản lý bệnh nhân: ROLE_ADMIN, LAB_MANAGER */}
-          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'LAB_MANAGER') && (
+          {/* Quản lý bệnh nhân: ROLE_ADMIN, ROLE_LAB_MANAGER */}
+          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_LAB_MANAGER') && (
             <div
               className={`flex items-center gap-3 py-2 px-3 rounded-lg font-medium text-sm cursor-pointer ${activeTab === 'patients' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}
               onClick={() => navigate('/patients')}
@@ -65,8 +65,8 @@ const Sidebar = () => {
               <FaUserMd className="w-5 h-5" /> Quản Lý Bệnh Nhân
             </div>
           )}
-          {/* Quản lý xét nghiệm: ROLE_ADMIN, LAB_MANAGER */}
-          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'LAB_MANAGER') && (
+          {/* Quản lý xét nghiệm: ROLE_ADMIN, ROLE_LAB_MANAGER, ROLE_LAB_USER */}
+          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_LAB_MANAGER' || user.roleCode === 'ROLE_LAB_USER') && (
             <div
               className={`flex items-center gap-3 py-2 px-3 rounded-lg font-medium text-sm cursor-pointer ${activeTab === 'tests' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}
               onClick={() => navigate('/tests')}
@@ -74,8 +74,8 @@ const Sidebar = () => {
               <FaVials className="w-5 h-5" /> Quản Lý Xét Nghiệm
             </div>
           )}
-          {/* Quản lý dịch vụ: ROLE_ADMIN, VIEWER */}
-          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'VIEWER') && (
+          {/* Quản lý dịch vụ: ROLE_ADMIN, ROLE_SERVICE, ROLE_LAB_MANAGER */}
+          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_SERVICE' || user.roleCode === 'ROLE_LAB_MANAGER') && (
             <div
               className={`flex items-center gap-3 py-2 px-3 rounded-lg text-gray-800 font-medium text-sm cursor-pointer ${activeTab === 'services' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}
               onClick={() => navigate('/services')}
@@ -83,8 +83,8 @@ const Sidebar = () => {
               <FaServicestack className="w-5 h-5" /> Quản Lý Dịch Vụ
             </div>
           )}
-          {/* Quản lý thiết bị: ROLE_ADMIN, VIEWER, LAB_MANAGER */}
-          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'VIEWER' || user.roleCode === 'LAB_MANAGER') && (
+          {/* Quản lý thiết bị: ROLE_ADMIN, ROLE_LAB_MANAGER, ROLE_LAB_USER */}
+          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_LAB_MANAGER' || user.roleCode === 'ROLE_LAB_USER') && (
             <div
               className={`flex items-center gap-3 py-2 px-3 rounded-lg  text-gray-800 font-medium text-sm cursor-pointer ${activeTab === 'devices' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}
               onClick={() => navigate('/devices')}
@@ -92,8 +92,8 @@ const Sidebar = () => {
               <FaBoxOpen className="w-5 h-5" /> Quản Lý Thiết Bị
             </div>
           )}
-          {/* Quản lý cấu hình: ROLE_ADMIN, LAB_MANAGER */}
-          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'LAB_MANAGER') && (
+          {/* Quản lý cấu hình: ROLE_ADMIN, ROLE_LAB_MANAGER */}
+          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_LAB_MANAGER') && (
             <div
               className={`flex items-center gap-3 py-2 px-3 rounded-lg text-gray-800 font-medium text-sm cursor-pointer ${activeTab === 'configurations' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}
               onClick={() => navigate('/configurations')}
@@ -110,8 +110,8 @@ const Sidebar = () => {
               <FaUserCog className="w-5 h-5" /> Quản Lý Người Dùng
             </div>
           )}
-          {/* Báo cáo & phân tích: ROLE_ADMIN, WATCHER */}
-          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'WATCHER') && (
+          {/* Báo cáo & phân tích: ROLE_ADMIN, ROLE_LAB_MANAGER */}
+          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_LAB_MANAGER') && (
             <div
               className={`flex items-center gap-3 py-2 px-3 rounded-lg  text-gray-800 font-medium text-sm  cursor-pointer ${activeTab === 'reports' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}
               onClick={() => navigate('/reports')}

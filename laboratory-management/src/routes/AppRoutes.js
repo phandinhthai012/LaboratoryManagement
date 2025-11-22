@@ -48,42 +48,42 @@ const AppRoutes = () => {
             {/*Admin Routes for ROLE_ADMIN, LAB_MANAGER, VIEWER, WATCHER*/}
             <Route
                 path="/dashboard"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'LAB_MANAGER', 'VIEWER', 'WATCHER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER', 'ROLE_LAB_USER', 'ROLE_SERVICE']}>
                     <Dashboard />
                 </ProtectedRoute>}
             />
             <Route
                 path="/patients"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'LAB_MANAGER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER']}>
                     <Patients />
                 </ProtectedRoute>}
             />
             <Route
                 path="/tests"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'LAB_MANAGER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER', 'ROLE_LAB_USER']}>
                     <Tests />
                 </ProtectedRoute>}
             />
             <Route
                 path="/test-orders/:id"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'LAB_MANAGER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER', 'ROLE_LAB_USER']}>
                     <TestOrderDetail />
                 </ProtectedRoute>}
             />
             <Route
                 path="/services"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'VIEWER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SERVICE', 'ROLE_LAB_MANAGER']}>
                     <Services /></ProtectedRoute>}
             />
             <Route
                 path="/devices"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'VIEWER', 'LAB_MANAGER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER', 'ROLE_LAB_USER']}>
                     <Devices />
                 </ProtectedRoute>}
             />
             <Route
                 path="/configurations"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'LAB_MANAGER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER']}>
                     <Configurations />
                 </ProtectedRoute>}
             />
@@ -95,13 +95,13 @@ const AppRoutes = () => {
             />
             <Route
                 path="/reports"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'WATCHER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER']}>
                     <Reports />
                 </ProtectedRoute>}
             />
             <Route
                 path="/profile"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'LAB_MANAGER', 'VIEWER', 'WATCHER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER', 'ROLE_LAB_USER', 'ROLE_SERVICE']}>
                     <Profile />
                 </ProtectedRoute>}
             />

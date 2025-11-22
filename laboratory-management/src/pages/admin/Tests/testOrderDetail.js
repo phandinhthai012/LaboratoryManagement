@@ -5,12 +5,11 @@ import {
     FaCheckCircle, FaSpinner, FaTimes, FaEdit,
     FaPrint, FaPhone, FaEnvelope, FaMapMarkerAlt,
     FaSave, FaMale, FaFemale, FaPlay, FaBan,
-    FaComments, FaPlus, FaPaperPlane, FaRobot,
+    FaComments, FaPaperPlane, FaRobot,
     FaUserCheck, FaStethoscope, FaComment // Thêm FaComment
 } from 'react-icons/fa';
 import MainLayout from '../../../layouts/MainLayout';
-import AddTestItemModal from './component/AddTestItemModal';
-import { formatDate, formatDateWithTime } from '../../../utils/helpers';
+import { formatDate } from '../../../utils/helpers';
 import { useTestOrderById, useTestOrder } from '../../../hooks/useTestOrder';
 import { useNotifier } from '../../../contexts/NotifierContext';
 
@@ -22,19 +21,16 @@ import { useTestComments } from '../../../hooks/useTestOrder';
 const TestOrderDetail = () => {
     const { showNotification } = useNotifier();
     const { id } = useParams();
+    console.log('Test Order ID from params:', id);
     const navigate = useNavigate();
     const { data: testOrder, isLoading, isError } = useTestOrderById(id);
     console.log('Fetched test order:', testOrder, id);
     const {
         updateTestOrder,
         isUpdateLoading,
-        updateTestOrderItem,
-        isUpdateItemLoading,
         sendOrderToInstrument,
         isSendOrderLoading,
-        printTestResults,
         isPrintTestResultsLoading
-
     } = useTestOrder();
 
     const {
@@ -53,16 +49,12 @@ const TestOrderDetail = () => {
         return testOrder.status === 'COMPLETED' &&
             (!testOrder.reviewStatus || testOrder.reviewStatus === 'NONE');
     };
-    const [showAddTestModal, setShowAddTestModal] = useState(false);
 
     // Comment state
     const [comments, setComments] = useState([]);
-    const [replyTo, setReplyTo] = useState(null); // ID của comment đang reply
-    const [replyContent, setReplyContent] = useState('');
     const [showCommentSection, setShowCommentSection] = useState({});
-    const [selectedResult, setSelectedResult] = useState(null);
 
-    // Mock comments từ API
+    // Load comments từ API
     useEffect(() => {
         if (testOrder?.comments) {
             setComments(testOrder.comments);
@@ -119,12 +111,10 @@ const TestOrderDetail = () => {
                 return 'Không xác định';
         }
     }
-    const canAddTestItem = () => {
-        return testOrder.status !== 'COMPLETED' && testOrder.status !== 'CANCELLED';
-    }
+
     const canGetResult = () => {
-        if (!testOrder.items || testOrder.items.length === 0) {
-            console.log('Không thể lấy kết quả: Không có mục xét nghiệm');
+        if (!testOrder.testType || !testOrder.testType.testParameters || testOrder.testType.testParameters.length === 0) {
+            console.log('Không thể lấy kết quả: Không có tham số xét nghiệm');
             return false;
         }
         // if (testOrder.status !== 'COMPLETED') {
@@ -134,14 +124,7 @@ const TestOrderDetail = () => {
 
         return true;
     }
-    // add test order item
-    const openAddTestItemModal = () => {
-        if (!canAddTestItem()) {
-            showNotification('Không thể thêm mục xét nghiệm', 'error');
-            return;
-        }
-        setShowAddTestModal(true);
-    }
+
 
     const sendOrderToGetResult = async () => {
         try {
@@ -224,6 +207,9 @@ const TestOrderDetail = () => {
         if (!content.trim()) return;
         try {
             const result = await createComment({ targetId, targetType, content });
+            if (result) {
+                setComments(prev => [result, ...prev]);
+            }
         } catch (error) {
             showNotification('Không thể thêm bình luận', 'error');
         }
@@ -235,11 +221,21 @@ const TestOrderDetail = () => {
         if (!commentId) return;
         try {
             const result = await replyComment({ commentId, content, targetId: testOrder.id });
-            // Cập nhật lại comments với reply mới
+            if (result) {
+                // Cập nhật comments với reply mới
+                setComments(prev => 
+                    prev.map(comment => 
+                        comment.id === commentId 
+                            ? { ...comment, replies: [...(comment.replies || []), result] }
+                            : comment
+                    )
+                );
+            }
         } catch (error) {
             console.error('Error replying to comment:', error);
+            showNotification('Không thể trả lời bình luận', 'error');
         }
-    }, [replyComment, testOrder]);
+    }, [replyComment, testOrder, showNotification]);
 
     const toggleCommentSection = (result) => {
         const resultId = result.id;
@@ -247,16 +243,12 @@ const TestOrderDetail = () => {
             ...prev,
             [resultId]: !prev[resultId] // Toggle cho result này
         }));
-        if (!showCommentSection[resultId]) {
-            setSelectedResult(result); // Set result đang được select
-        }
     };
     const closeCommentSection = (resultId) => {
         setShowCommentSection(prev => ({
             ...prev,
             [resultId]: false
         }));
-        setSelectedResult(null);
     };
     const handleAddCommentForResult = async (payload) => {
         try {
@@ -454,73 +446,77 @@ const TestOrderDetail = () => {
                     </div>
                     <div className="mt-6 bg-white rounded-lg shadow-md p-6">
                         <h2 className="text-xl font-semibold mb-4 flex items-center">
-                            <FaFlask className="mr-2 text-purple-600" /> Danh sách xét nghiệm ({testOrder.items?.length || 0})
-                            {/* button add new test item */}
-                            {canAddTestItem() ? (
-                                <button
-                                    className="ml-auto px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center text-sm transition-colors"
-                                    onClick={openAddTestItemModal}
-                                >
-                                    <FaPlus className="mr-1" size={12} /> Thêm xét nghiệm
-                                </button>
-                            ) : (
-                                <span className="ml-auto px-3 py-1 bg-gray-400 text-white rounded-lg flex items-center text-sm cursor-not-allowed">
-                                    <FaBan className="mr-1" size={12} />
-                                    {testOrder.status === 'COMPLETED' ? 'Đơn đã hoàn thành' : 'Không thể thêm'}
-                                </span>
-                            )}
+                            <FaFlask className="mr-2 text-purple-600" /> Thông tin loại xét nghiệm
                         </h2>
-                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                            <table className="w-full table-auto">
-                                <thead className="sticky top-0 bg-white">
-                                    <tr className="bg-gray-50">
-                                        <th className="px-4 py-3 text-left">Mã xét nghiệm</th>
-                                        <th className="px-4 py-3 text-left">Tên xét nghiệm</th>
-                                        <th className="px-4 py-3 text-left">Trạng thái</th>
-                                        <th className="px-4 py-3 text-left">Ngày tạo</th>
-                                        <th className="px-4 py-3 text-left">Cập nhật lần cuối</th>
-                                        <th className="px-4 py-3 text-left">Trạng thái</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {testOrder.items?.map((item, index) => {
-                                        return (
-                                            <tr key={item.id} className="border-b hover:bg-gray-50">
-                                                <td className="px-4 py-3 font-medium">{item.testCode}</td>
-                                                <td className="px-4 py-3">{item.testName}</td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
-                                                        {item.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-600">
-                                                    <div>
-                                                        <div>{formatDateWithTime(item.createdAt)?.date}</div>
-                                                        <div className="text-xs text-gray-500">{formatDateWithTime(item.createdAt)?.time}</div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-600">
-                                                    <div>
-                                                        <div>{formatDateWithTime(item.updatedAt)?.date}</div>
-                                                        <div className="text-xs text-gray-500">{formatDateWithTime(item.updatedAt)?.time}</div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)} cursor-pointer`}>
-                                                        {getStatusText(item.status)}
-                                                    </span>
-                                                </td>
+                        <div className="space-y-4">
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <span className="text-sm text-gray-600">Tên loại xét nghiệm:</span>
+                                        <p className="font-medium">{testOrder.testType?.name || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600">Thuốc thử:</span>
+                                        <p className="font-medium">{testOrder.testType?.reagentName || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600">Mô tả:</span>
+                                        <p className="text-sm">{testOrder.testType?.description || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600">Thể tích yêu cầu:</span>
+                                        <p className="font-medium">{testOrder.testType?.requiredVolume || 0} mL</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Test Parameters */}
+                            <div>
+                                <h3 className="text-lg font-medium mb-3 flex items-center">
+                                    <FaStethoscope className="mr-2" /> Tham số xét nghiệm ({testOrder.testType?.testParameters?.length || 0})
+                                </h3>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full table-auto">
+                                        <thead>
+                                            <tr className="bg-gray-50">
+                                                <th className="px-4 py-3 text-left">Tên tham số</th>
+                                                <th className="px-4 py-3 text-left">Ký hiệu</th>
+                                                <th className="px-4 py-3 text-left">Mô tả</th>
+                                                <th className="px-4 py-3 text-left">Khoảng tham chiếu</th>
                                             </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                                        </thead>
+                                        <tbody>
+                                            {testOrder.testType?.testParameters?.map((param, index) => {
+                                                return (
+                                                    <tr key={param.testParameterId} className="border-b hover:bg-gray-50">
+                                                        <td className="px-4 py-3 font-medium">{param.paramName}</td>
+                                                        <td className="px-4 py-3">{param.abbreviation}</td>
+                                                        <td className="px-4 py-3 text-sm">{param.description}</td>
+                                                        <td className="px-4 py-3">
+                                                            {param.parameterRanges?.map((range, idx) => (
+                                                                <div key={range.parameterRangeId} className="mb-1">
+                                                                    <span className="text-xs bg-gray-200 px-2 py-1 rounded mr-1">
+                                                                        {range.gender === 'BOTH' ? 'Chung' : (range.gender === 'MALE' ? 'Nam' : 'Nữ')}
+                                                                    </span>
+                                                                    <span className="text-sm">
+                                                                        {range.minValue}-{range.maxValue} {range.unit}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div className="mt-6 bg-white rounded-lg shadow-md p-6">
                         <div className='flex justify-between items-center mb-4'>
                             <h2 className="text-xl font-semibold mb-4 flex items-center">
-                                <FaCheckCircle className="mr-2 text-green-600" /> Kết quả xét nghiệm ({testOrder.results.length})
+                                <FaCheckCircle className="mr-2 text-green-600" /> Kết quả xét nghiệm ({testOrder.results?.length || 0})
                             </h2>
                             {canGetResult() ? (
                                 <button
@@ -663,12 +659,6 @@ const TestOrderDetail = () => {
                         />
                     </div>
                 </div>
-                <AddTestItemModal
-                    isOpen={showAddTestModal}
-                    onClose={() => setShowAddTestModal(false)}
-                    testOrderId={testOrder.id}
-                    existingTestNames={testOrder.items.map(item => item.testName)}
-                />
             </div>
         </MainLayout>
     );

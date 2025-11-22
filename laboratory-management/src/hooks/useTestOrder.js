@@ -14,7 +14,7 @@ export const useTestOrdersList = (params = {}) => {
         queryKey: querykeys.listTestOrders(params),
         queryFn: async () => {
             const response = await testOrderService.getAllTestOrders(params);
-            return response.data;
+            return response;
         },
         staleTime: 5 * 60 * 1000, // 5 minutes - longer cache for list data
         gcTime: 15 * 60 * 1000, // 15 minutes - keep in memory longer
@@ -44,7 +44,7 @@ export const useTestOrderById = (testOrderId) => {
     return useQuery({
         queryKey: querykeys.testOrderDetails(testOrderId),
         queryFn: async () => {
-            const response = await testOrderService.viewTestOrder(testOrderId);
+            const response = await testOrderService.getTestOrderById(testOrderId);
             return response.data;
         },
         enabled: !!testOrderId, // Only run when testOrderId is provided
@@ -216,6 +216,7 @@ export const useTestComments = () => {
 
     const replyCommentMutation = useMutation({
         mutationFn: async ({ commentId, content, targetId }) => {
+            console.log('Replying to commentId:', commentId, 'with content:', content);
             const response = await testOrderService.replyComment(commentId, { content });
             return response.data;
         },

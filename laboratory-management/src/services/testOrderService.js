@@ -2,8 +2,24 @@ import apiClient from "./apiClient";
 import { API_ENDPOINTS } from "../config/api";
 
 const testOrderService = {
-    // 01. Create Patient Test Order
-    // "medicalRecordCode": "MRC-251015211926-F5EEEB-880"
+
+    getAllTestOrders: async(params) => {
+        try {
+            console.log("Params in service:", params);
+            const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_ALL_TEST_ORDERS, {params});
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+    getTestOrderById: async(orderId) => {
+        try {
+            const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_TEST_ORDER_BY_ID(orderId));
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
     createTestOrder: async(data) => {
         try {
             if(!data.medicalRecordCode) {
@@ -17,7 +33,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // view Test Order
     viewTestOrder: async(testOrderId) => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.VIEW_DETAIL_TEST_ORDER(testOrderId));
@@ -26,7 +41,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // delete
     deleteTestOrder: async(testOrderId) => {
         try {
             const response = await apiClient.delete(API_ENDPOINTS.TESTORDER.DELETE_TEST_ORDER(testOrderId));
@@ -35,7 +49,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // VIEW_TEST_ORDER_ITEM
     viewTestOrderItem: async(testOrderId, itemId) => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.VIEW_TEST_ORDER_ITEM(testOrderId, itemId));
@@ -44,9 +57,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // PRINT_TEST_RESULTS
-    // "customFileName": "bao thong",
-    // "customSavePath": "D:\\MyNewFolder\\Reports"
     printTestResults: async(testOrderId, data) => {
         try {
             const { customFileName } = data;
@@ -62,7 +72,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // ADD_TEST_ORDER_ITEM
     addTestOrderItem: async(data) => {
         try {
              const { testOrderId, testName } = data;
@@ -74,12 +83,6 @@ const testOrderService = {
             throw error;
         }
     },
-//     {
-//     "status": "PENDING",
-//     "reviewStatus": "NONE",
-//     "reviewMode": "HUMAN"
-// }
-    // UPDATE_TEST_ORDER_BY_CODE
     updateTestOrderByCode: async(testOrderCode, updatedData) => {
         try {
             const { status, reviewStatus, reviewMode } = updatedData;
@@ -94,16 +97,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // GET_ALL_TEST_ORDERS
-    getAllTestOrders: async(queryParams) => {
-        try {
-            const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_ALL_TEST_ORDERS, { params: queryParams });
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
-    },
-    // UPDATE_TEST_ORDER_ITEM
     updateTestOrderItem: async(testOrderId, itemId, updatedData) => {
         try {
             const { testName, status } = updatedData;
@@ -116,7 +109,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // GET_ALL_TEST_CATALOGS
     getAllTestCatalogs: async() => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_ALL_TEST_CATALOGS);
@@ -125,8 +117,6 @@ const testOrderService = {
             throw error;
         }
     },
-
-    // comments related APIs
     createComment: async(data) => {
         try {
             const {
@@ -143,7 +133,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // MODIFY_COMMENT
     modifyComment: async(commentId, updatedData) => {
         try {
             const {
@@ -158,7 +147,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // DELETE_COMMENT
     deleteComment: async(commentId) => {
         try {
             const response = await apiClient.post(API_ENDPOINTS.COMMENTS.DELETE_COMMENT(commentId),{
@@ -169,7 +157,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // REPLY_COMMENT
     replyComment: async(commentId, replyData) => {
         try {
             const {content} = replyData;
@@ -182,7 +169,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // sendOrderToInstrument
     sendOrderToInstrument: async(testOrderId) => {
         try {
             const response = await apiClient.post(API_ENDPOINTS.TESTORDER.SEND_ORDER_TO_INSTRUMENT(testOrderId));
@@ -191,7 +177,6 @@ const testOrderService = {
             throw error;
         }
     },
-    // getReportJobStatus
     getReportJobStatus: async(jobId) => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_REPORT_JOB_STATUS(jobId));

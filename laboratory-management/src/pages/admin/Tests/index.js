@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaPlus, FaEye, FaEdit, FaTrash, FaClock, FaCheckCircle, FaSpinner, FaFlask, FaTimes } from 'react-icons/fa';
 import MainLayout from '../../../layouts/MainLayout';
-import { useTestOrdersList, useTestCatalogs, useTestOrder } from '../../../hooks/useTestOrder';
+import { useTestOrdersList, useTestOrder } from '../../../hooks/useTestOrder';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatDate } from '../../../utils/helpers';
 import { StatisticCard } from './component/StatisticCard';
@@ -13,19 +13,15 @@ const Tests = () => {
     const today = formatDate(new Date());
     const { user } = useAuth();
     const navigate = useNavigate();
-    //sort patientName, status, updatedAt, reviewStatus, createdAt
-    //Mới
     const [paginationParams, setPaginationParams] = useState({
-        sort: ['createdAt,desc'],
         page: 0,
         size: 10,
-        search: '',
+        sorts: 'updatedAt,desc',
     });
     const [filters, setFilters] = useState({
         gender: '',
-        status: '',
+        status: ''
     });
-    const [displayedTestCatalogs, setDisplayedTestCatalogs] = useState(5);
     const [searchTerm, setSearchTerm] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -36,28 +32,19 @@ const Tests = () => {
     });
 
     const { data: responseTestOrders, isLoading } = useTestOrdersList(paginationParams);
-    const { data: testCatalogs } = useTestCatalogs();
+    const { deleteTestOrder, isDeleteLoading } = useTestOrder();
 
-    const {deleteTestOrder, isDeleteLoading} = useTestOrder();
-
-    const testOrders = responseTestOrders?.values || [];
+    const testOrders = responseTestOrders?.data?.values || [];
     const paginationInfo = {
-        totalElements: responseTestOrders?.totalElements || 0,
-        totalPages: responseTestOrders?.totalPages || 0,
-        currentPage: responseTestOrders?.page || 0,
-        size: responseTestOrders?.size || 10,
-        empty: !responseTestOrders?.values?.length || responseTestOrders?.totalElements === 0,
-        last: responseTestOrders?.last || false,
-        first: responseTestOrders?.page === 0
+        totalElements: responseTestOrders?.data?.totalElements || 0,
+        totalPages: responseTestOrders?.data?.totalPages || 0,
+        currentPage: responseTestOrders?.data?.page || 0,
+        size: responseTestOrders?.data?.size || 10,
+        empty: !testOrders?.length || responseTestOrders?.data?.totalElements === 0,
+        last: responseTestOrders?.data?.last || false,
+        first: responseTestOrders?.data?.page === 0
     };
 
-
-    const handleLoadMore = () => {
-        setDisplayedTestCatalogs(prev => Math.min(prev + 5, testCatalogs.length));
-    };
-    const handleShowLess = () => {
-        setDisplayedTestCatalogs(5);
-    };
 
     const handlePageChange = useCallback((newPage) => {
         setPaginationParams(prev => ({
@@ -73,23 +60,15 @@ const Tests = () => {
             page: 0 // Reset to first page
         }));
     }, []);
-    const handleGenderFilter = useCallback((gender) => {
-        setFilters(prev => ({
-            ...prev,
-            gender
-        }));
+    const handleFilterChange = useCallback((key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
     }, []);
+    
     const handleSortChange = useCallback((sortField, sortDirection = 'desc') => {
         setPaginationParams(prev => ({
             ...prev,
-            sort: [`${sortField},${sortDirection}`],
+            sorts: `${sortField},${sortDirection}`,
             page: 0
-        }));
-    }, []);
-    const handleStatusFilter = useCallback((status) => {
-        setFilters(prev => ({
-            ...prev,
-            status: status
         }));
     }, []);
 
@@ -100,10 +79,9 @@ const Tests = () => {
             status: '',
         });
         setPaginationParams({
-            sort: ['createdAt', 'desc'],
             page: 0,
             size: 10,
-            search: '',
+            sorts: 'updatedAt,desc'
         });
     }, []);
 
@@ -111,57 +89,44 @@ const Tests = () => {
         navigate(`/test-orders/${testOrderId}`);
     }
 
-    const openDialogConfirmDelete = (testOrderId) => {
-        setDialogConfirmDelete({
-            isOpen: true,
-            testOrderId: testOrderId
-        });
-    }
+    const openDialogConfirmDelete = useCallback((testOrderId) => {
+        setDialogConfirmDelete({ isOpen: true, testOrderId });
+    }, []);
 
-    const handleDeleteTestOrder = async () => {
+    const handleDeleteTestOrder = useCallback(async () => {
         const { testOrderId } = dialogConfirmDelete;
         if (!testOrderId) return;
+        
         try {
             await deleteTestOrder(testOrderId);
         } catch (error) {
             console.error('Error deleting test order:', error);
-        }finally {
-            handleCloseDialogConfirmDelete();
+        } finally {
+            setDialogConfirmDelete({ isOpen: false, testOrderId: null });
         }
-    }
-    const handleCloseDialogConfirmDelete = () => {
-        setDialogConfirmDelete({
-            isOpen: false,
-            testOrderId: null
-        });
-    }
+    }, [dialogConfirmDelete, deleteTestOrder]);
 
 
-    // useEffect change paginationParams and searchTerm when filters change
+    // Sync filters and search with pagination params
     useEffect(() => {
         const timeoutId = setTimeout(() => {
+            const cleanFilters = Object.fromEntries(
+                Object.entries(filters).filter(([_, value]) => value !== '')
+            );
+            
             setPaginationParams(prev => ({
                 ...prev,
-                search: searchTerm,
-                page: 0 // Reset to first page when searching
+                ...cleanFilters,
+                ...(searchTerm && { search: searchTerm }),
+                page: 0
             }));
-        }, 500); // 500ms delay
+        }, searchTerm ? 500 : 0); // Debounce only for search
 
         return () => clearTimeout(timeoutId);
-    }, [searchTerm]);
-    useEffect(() => {
-        setPaginationParams(prev => ({
-            ...prev,
-            ...filters,
-            page: 0 // Reset to first page when filtering
-        }));
-    }, [filters]);
-
-
-
+    }, [searchTerm, filters]);
 
     // Calculate statistics
-    const totalTests = testOrders.length || 0;
+    const totalTests = responseTestOrders?.data?.totalElements || 0;
     const pendingTests = testOrders.filter(test => test.status === 'PENDING').length;
     const inProgressTests = testOrders.filter(test => test.status === 'IN_PROGRESS').length;
     const completedTests = testOrders.filter(test => test.status === 'COMPLETED').length;
@@ -204,23 +169,14 @@ const Tests = () => {
         );
     };
 
-
-//test push thử
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-            minimumFractionDigits: 0
-        }).format(amount);
-    };
-    const formatDateWithTime = (dateString) => {
-        if (!dateString) return 'N/A';
+    const formatDateWithTime = useCallback((dateString) => {
+        if (!dateString) return { date: 'N/A', time: 'N/A' };
         const date = new Date(dateString);
         return {
             date: date.toLocaleDateString('vi-VN'),
             time: date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
         };
-    };
+    }, []);
     return (
         <MainLayout>
             <div>
@@ -337,7 +293,7 @@ const Tests = () => {
                                 <label className="text-sm font-medium text-gray-700">Giới tính:</label>
                                 <select
                                     value={filters.gender}
-                                    onChange={(e) => handleGenderFilter(e.target.value)}
+                                    onChange={(e) => handleFilterChange('gender', e.target.value)}
                                     className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                                 >
                                     <option value="">Tất cả</option>
@@ -350,7 +306,7 @@ const Tests = () => {
                                 <label className="text-sm font-medium text-gray-700">Trạng thái:</label>
                                 <select
                                     value={filters.status}
-                                    onChange={(e) => handleStatusFilter(e.target.value)}
+                                    onChange={(e) => handleFilterChange('status', e.target.value)}
                                     className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                                 >
                                     <option value="">Tất cả</option>
@@ -363,15 +319,15 @@ const Tests = () => {
                             <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium text-gray-700">Sắp xếp:</label>
                                 <select
-                                    value={paginationParams.sort[0]}
+                                    value={paginationParams.sorts || 'updatedAt,desc'}
                                     onChange={(e) => {
                                         const [field, direction] = e.target.value.split(',');
                                         handleSortChange(field, direction);
                                     }}
                                     className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
                                 >
-                                    {/* <option value="fullName,asc">Tên (A → Z)</option>
-                                    <option value="fullName,desc">Tên (Z → A)</option> */}
+                                    <option value="updatedAt,desc">Cập Nhật (Mới → Cũ)</option>
+                                    <option value="updatedAt,asc">Cập Nhật (Cũ → Mới)</option>
                                     <option value="createdAt,desc">Ngày Tạo (Mới → Cũ)</option>
                                     <option value="createdAt,asc">Ngày Tạo (Cũ → Mới)</option>
                                 </select>
@@ -385,16 +341,6 @@ const Tests = () => {
                             </div>
                         </div>
                     </div>
-                    {/* STT - Số thứ tự có pagination
-Mã Đơn - Order code + ID để identify
-Thông Tin Bệnh Nhân - Tên, tuổi, giới tính, mã hồ sơ, SĐT (compact)
-Số Lượng Tests - Số tests + preview 2 tests đầu
-Ngày Tạo - Ngày + thời gian cập nhật
-Trạng Thái - Status của đơn với icon và màu sắc
-Trạng Thái Duyệt - Review status riêng biệt
-Thao Tác - View details, Edit, Delete, 
-→ Thiết kế này tận dụng tối đa thông tin */}
-
                     {/* Test Orders Table */}
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[1150px]">
@@ -410,7 +356,7 @@ Thao Tác - View details, Edit, Delete,
                                         Thông Tin Bệnh Nhân
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
-                                        Số Lượng Tests
+                                        Loại Xét Nghiệm
                                     </th>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                                         Ngày Tạo
@@ -465,11 +411,11 @@ Thao Tác - View details, Edit, Delete,
                                                 </div>
                                             </td>
 
-                                            {/* Thông Tin Bệnh Nhân - Compact */}
+                                            {/* Thông Tin Bệnh Nhân */}
                                             <td className="px-4 py-4 text-sm text-gray-900">
                                                 <div className="max-w-[240px]">
-                                                    <div className="font-medium truncate" title={testOrder?.fullName}>
-                                                        {testOrder?.fullName}
+                                                    <div className="font-medium truncate" title={testOrder.fullName}>
+                                                        {testOrder.fullName}
                                                     </div>
                                                     <div className="text-xs text-gray-500">
                                                         {testOrder.age} tuổi • {testOrder.gender === 'MALE' ? 'Nam' : testOrder.gender === 'FEMALE' ? 'Nữ' : 'Khác'}
@@ -477,9 +423,14 @@ Thao Tác - View details, Edit, Delete,
                                                     <div className="text-xs text-gray-500 truncate" title={testOrder.medicalRecordCode}>
                                                         {testOrder.medicalRecordCode}
                                                     </div>
-                                                    <div className="text-xs text-gray-500">
+                                                    <div className="text-xs text-gray-500 truncate">
                                                         {testOrder.phone}
                                                     </div>
+                                                    {testOrder.barcode && (
+                                                        <div className="text-xs text-blue-500 truncate" title={testOrder.barcode}>
+                                                            {testOrder.barcode}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
 
@@ -488,13 +439,19 @@ Thao Tác - View details, Edit, Delete,
                                                 <div className="max-w-[150px]">
                                                     <div className="flex items-center">
                                                         <FaFlask className="w-4 h-4 text-blue-500 mr-2" />
-                                                        <span className="font-medium">{testOrder.items?.length || 0}</span>
-                                                        <span className="text-gray-500 ml-1">tests</span>
+                                                        <span className="font-medium">
+                                                            {testOrder.testType?.testParameters?.length || 0}
+                                                        </span>
+                                                        <span className="text-gray-500 ml-1">param</span>
                                                     </div>
-                                                    {testOrder.items?.length > 0 && (
-                                                        <div className="text-xs text-gray-500 mt-1 truncate" title={testOrder.items.map(item => item.testName).join(', ')}>
-                                                            {testOrder.items.slice(0, 1).map(item => item.testName).join('')}
-                                                            {testOrder.items.length > 1 && ` +${testOrder.items.length - 1}`}
+                                                    {testOrder.testType && (
+                                                        <div className="text-xs text-gray-500 mt-1 truncate" title={testOrder.testType.name}>
+                                                            {testOrder.testType.name}
+                                                        </div>
+                                                    )}
+                                                    {testOrder.results && testOrder.results.length > 0 && (
+                                                        <div className="text-xs text-green-600 mt-1">
+                                                            {testOrder.results.length} kết quả
                                                         </div>
                                                     )}
                                                 </div>
@@ -514,6 +471,11 @@ Thao Tác - View details, Edit, Delete,
                                             <td className="px-4 py-4 whitespace-nowrap">
                                                 <div className="max-w-[120px]">
                                                     {getStatusBadge(testOrder.status)}
+                                                    {testOrder.runAt && (
+                                                        <div className="text-xs text-blue-500 mt-1">
+                                                            Đã chạy: {formatDateWithTime(testOrder.runAt).time}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
 
@@ -619,158 +581,21 @@ Thao Tác - View details, Edit, Delete,
                     )}
                 </div>
 
-                {/* Available Test Catalogs */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                    <div className="p-6 border-b border-gray-200">
-                        <h2 className="text-lg font-semibold text-gray-900">Danh Mục Xét Nghiệm</h2>
-                        <p className="text-sm text-gray-600">Các loại xét nghiệm có sẵn trong hệ thống</p>
-                    </div>
 
-                    {isLoading ? (
-                        <div className="flex items-center justify-center py-12">
-                            <div className="flex items-center space-x-2 text-gray-600">
-                                <FaSpinner className="w-5 h-5 animate-spin" />
-                                <span>Đang tải danh mục xét nghiệm...</span>
-                            </div>
-                        </div>
-                    ) : testCatalogs && testCatalogs.length > 0 ? (
-                        <div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Mã Test
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Tên Xét Nghiệm
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Phương Pháp
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Loại Mẫu
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Đơn Vị
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Giá Trị Tham Chiếu
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                LOINC Code
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Trạng Thái
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {testCatalogs.slice(0, displayedTestCatalogs).map((catalog) => (
-                                            <tr key={catalog.id} className="hover:bg-gray-50">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    {catalog.localCode}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-900">
-                                                    <div className="flex items-center">
-                                                        <FaFlask className="w-4 h-4 text-blue-500 mr-2" />
-                                                        {catalog.testName}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {catalog.method || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                        {catalog.specimenType}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {catalog.unit || 'N/A'}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
-                                                        {catalog.referenceRange || 'N/A'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    <span className="font-mono text-xs text-blue-600">
-                                                        {catalog.loincCode || 'N/A'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    {catalog.active ? (
-                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                            <FaCheckCircle className="w-3 h-3 mr-1" />
-                                                            Hoạt động
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                            <FaClock className="w-3 h-3 mr-1" />
-                                                            Không hoạt động
-                                                        </span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
 
-                            {/* Load More/Show Less Controls */}
-                            {testCatalogs.length > 5 && (
-                                <div className="flex items-center justify-center space-x-4 p-6 border-t border-gray-200 bg-gray-50">
-                                    <div className="text-sm text-gray-600">
-                                        Hiển thị {Math.min(displayedTestCatalogs, testCatalogs.length)} / {testCatalogs.length} test catalogs
-                                    </div>
-                                    <div className="flex space-x-2">
-                                        {displayedTestCatalogs < testCatalogs.length && (
-                                            <button
-                                                onClick={handleLoadMore}
-                                                className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors"
-                                            >
-                                                Xem thêm ({Math.min(5, testCatalogs.length - displayedTestCatalogs)})
-                                            </button>
-                                        )}
-                                        {displayedTestCatalogs > 5 && (
-                                            <button
-                                                onClick={handleShowLess}
-                                                className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                                            >
-                                                Thu gọn
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center py-12">
-                            <div className="text-center">
-                                <FaFlask className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                    Không có danh mục xét nghiệm
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    Chưa có danh mục xét nghiệm nào được tải từ hệ thống.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-            {/* confirm delete dialog */}
-            <ConfirmDialog
-                isOpen={dialogConfirmDelete.isOpen}
-                title="Xác nhận xóa đơn xét nghiệm"
-                message="Bạn có chắc chắn muốn xóa đơn xét nghiệm này? Hành động này không thể hoàn tác."
-                type="danger"
-                isLoading={isDeleteLoading}
-                onClose={handleCloseDialogConfirmDelete}
-                onConfirm={handleDeleteTestOrder}
-            />
+                {/* confirm delete dialog */}
+                <ConfirmDialog
+                    isOpen={dialogConfirmDelete.isOpen}
+                    title="Xác nhận xóa đơn xét nghiệm"
+                    message="Bạn có chắc chắn muốn xóa đơn xét nghiệm này? Hành động này không thể hoàn tác."
+                    type="danger"
+                    isLoading={isDeleteLoading}
+                    onClose={() => setDialogConfirmDelete({ isOpen: false, testOrderId: null })}
+                    onConfirm={handleDeleteTestOrder}
+                />
             </div>
         </MainLayout>
+
     );
 };
 
