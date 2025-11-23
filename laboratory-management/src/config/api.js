@@ -73,6 +73,8 @@ export const API_ENDPOINTS = {
         SEND_ORDER_TO_INSTRUMENT: (orderId) => `${API_PREFIX}/hl7/${orderId}/request`,
         //http://localhost:8080/api/v1/report-jobs/7b2be1d4-5270-4d6e-85d2-ab6806bdb5b8
         GET_REPORT_JOB_STATUS: (jobId) => `${API_PREFIX}/report-jobs/${jobId}`,
+        // http://localhost:8080/api/v1/test-types
+        CREATE_TEST_TYPE: `${API_PREFIX}/test-types`,
 
     },
     COMMENTS : {
@@ -105,6 +107,9 @@ export const API_ENDPOINTS = {
         GET_ALL_CONFIGURATIONS: `${API_PREFIX}/warehouse/configurations`,
         // http://localhost:8080/api/v1/warehouse/configurations/CFS-251103111530-de796b1a-7950
         GET_CONFIGURATION_BY_ID: (configCode) => `${API_PREFIX}/warehouse/configurations/${configCode}`,
+        // delete configuration
+        // http://localhost:8080/api/v1/warehouse/configurations/CFS-251113001000-f6ded788-9711
+        DELETE_CONFIGURATION: (configCode) => `${API_PREFIX}/warehouse/configurations/${configCode}`,
         // ReceiveReagantHistoryForVendorSupply
         //http://localhost:8080/api/v1/warehouse/reagents/history/receive
         RECEIVE_REAGANT_HISTORY_FOR_VENDOR_SUPPLY: `${API_PREFIX}/warehouse/reagents/history/receive`,
@@ -117,6 +122,10 @@ export const API_ENDPOINTS = {
         //http://localhost:8080/api/v1/warehouse/test-parameters?page=0&size=20&sort=paramName,asc&search=WBC
         GET_ALL_TEST_PARAMETERS: `${API_PREFIX}/warehouse/test-parameters`,
     },
+    INSTRUMENT : {
+        // http://localhost:8080/api/v1/sample-analysis/initiate
+        INITIATE_SAMPLE_ANALYSIS: `${API_PREFIX}/sample-analysis/initiate`,
+    }
 }
 
 

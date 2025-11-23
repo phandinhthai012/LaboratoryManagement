@@ -7,7 +7,7 @@ const querykeys = {
   // instrumentStatus: ['warehouse', 'instrumentStatus'],
   allConfigurations: (params) => ['warehouse', 'configurations', params],
   configurationDetails: (configId) => ['warehouse', 'configuration', configId],
-  testParameters: ['warehouse', 'testParameters'],
+  testParameters: (params) => ['warehouse', 'testParameters', params]
 };
 
 // Hook for fetching all instruments
@@ -70,9 +70,9 @@ export const useWareHouse = () => {
   // Create configurations mutation
   const createConfigurationsMutation = useMutation({
     mutationFn: (configData) => warehouseService.createConfigurations(configData),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['warehouse', 'configurations'] });
       showNotification('Tạo cấu hình thành công', 'success');
-      queryClient.invalidateQueries({ queryKey: ['warehouse', 'configurations'] });
     },
     onError: (error) => {
       showNotification(`Tạo cấu hình thất bại: ${error.message}`, 'error');
@@ -85,7 +85,7 @@ export const useWareHouse = () => {
     onSuccess: (data) => {
       showNotification('Kiểm tra trạng thái thiết bị thành công', 'success');
       // Invalidate status queries for this instrument
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         // queryKey: ['warehouse', 'instrumentStatus'] 
         queryKey: ['warehouse', 'instrumentStatus', data.instrumentId]
       });
@@ -112,7 +112,7 @@ export const useWareHouse = () => {
   const deactivateInstrumentMutation = useMutation({
     mutationFn: (deactivateData) => warehouseService.deactivateInstrument(deactivateData),
     onSuccess: async () => {
-      
+
       await queryClient.invalidateQueries({ queryKey: ['warehouse', 'instruments'] });
       // await queryClient.invalidateQueries({ queryKey: ['warehouse', 'instrumentStatus'] });
       showNotification('Vô hiệu hóa thiết bị thành công', 'success');
@@ -136,6 +136,17 @@ export const useWareHouse = () => {
     },
   });
 
+  const deleteConfigurationMutation = useMutation({
+    mutationFn: (configId) => warehouseService.deleteConfiguration(configId),
+    onSuccess: () => {
+      showNotification('Xóa cấu hình thành công', 'success');
+      queryClient.invalidateQueries({ queryKey: ['warehouse', 'configurations'] });
+    },
+    onError: (error) => {
+      showNotification(`Xóa cấu hình thất bại: ${error.message}`, 'error');
+    },
+  });
+
   return {
     // Instrument operations
     addInstrument: addInstrumentMutation.mutateAsync,
@@ -156,13 +167,16 @@ export const useWareHouse = () => {
 
     modifyConfiguration: modifyConfigurationMutation.mutateAsync,
     isModifyingConfiguration: modifyConfigurationMutation.isPending,
+
+    deleteConfiguration: deleteConfigurationMutation.mutateAsync,
+    isDeletingConfiguration: deleteConfigurationMutation.isPending,
   };
 };
 
-export const useAllTestParameters = () => {
+export const useAllTestParameters = (param = {}) => {
   return useQuery({
-    queryKey: querykeys.testParameters,
-    queryFn: () => warehouseService.getAllTestParameters(),
+    queryKey: querykeys.testParameters(param),
+    queryFn: () => warehouseService.getAllTestParameters(param),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }

@@ -1,6 +1,9 @@
-import React from 'react';
+import React, {useState} from 'react';
 import { FaEdit, FaTrash, FaEye } from 'react-icons/fa';
-
+import { useWareHouse } from '../../../../hooks/useWareHouse';
+import ConfirmDialog from '../../../../components/ConfirmDialog';
+import ViewConfigurationModal from './ViewConfigurationModal';
+import EditConfigurationModal from './EditConfigurationModal';
 const SystemConfigurationsTab = ({
     filteredData,
     searchTerm,
@@ -12,6 +15,11 @@ const SystemConfigurationsTab = ({
     onPageSizeChange,
     isLoading
 }) => {
+    const {deleteConfiguration, isDeletingConfiguration} = useWareHouse();
+
+    const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, configId: null });
+    const [viewConfigId, setViewConfigId] = useState(null);
+    const [editConfigId, setEditConfigId] = useState(null);
 
     const formatValue = (value, dataType) => {
         if (!value) return 'N/A';
@@ -54,17 +62,31 @@ const SystemConfigurationsTab = ({
     };
     const handleView = (config) => {
         console.log('View config:', config);
-        // TODO: Implement view functionality - có thể mở modal hoặc navigate to detail page
+        setViewConfigId(config.id);
     };
 
     const handleEdit = (config) => {
         console.log('Edit config:', config);
-        // TODO: Implement edit functionality
+        setEditConfigId(config.id);
     };
 
-    const handleDelete = (configId) => {
-        console.log('Delete config:', configId);
-        // TODO: Implement delete functionality
+    const openConfirmDelete = (configId) => {
+        setConfirmDelete({ isOpen: true, configId });
+    };
+
+    const closeConfirmDelete = () => {
+        setConfirmDelete({ isOpen: false, configId: null });
+    };
+
+    const handleConfirmDelete = async () => {
+        if (confirmDelete.configId) {
+            try {
+                await deleteConfiguration(confirmDelete.configId);
+                setConfirmDelete({ isOpen: false, configId: null });
+            } catch (error) {
+                console.error('Failed to delete configuration:', error);
+            }
+        }
     };
 
     return (
@@ -277,7 +299,7 @@ const SystemConfigurationsTab = ({
                                                     <FaEdit className="w-3 h-3" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(config.id)}
+                                                    onClick={() => openConfirmDelete(config.id)}
                                                     className={`p-1 rounded transition-all ${config.isDeleted
                                                             ? 'text-gray-400 cursor-not-allowed'
                                                             : 'text-red-600 hover:bg-red-100'
@@ -297,6 +319,24 @@ const SystemConfigurationsTab = ({
 
                 </div>
             </div>
+            <ConfirmDialog
+                isOpen={confirmDelete.isOpen}
+                title="Xác nhận xóa cấu hình"
+                message="Bạn có chắc chắn muốn xóa cấu hình này? Hành động này không thể hoàn tác."
+                onCancel={closeConfirmDelete}
+                onConfirm={handleConfirmDelete}
+                isLoading={isDeletingConfiguration}
+            />
+            <ViewConfigurationModal
+                isOpen={!!viewConfigId}
+                onClose={() => setViewConfigId(null)}
+                configID={viewConfigId}
+            />
+            <EditConfigurationModal
+                isOpen={!!editConfigId}
+                onClose={() => setEditConfigId(null)}
+                configID={editConfigId}
+            />
 
             {/* Pagination */}
             {paginationInfo && paginationInfo.totalElements > 0 && (

@@ -7,6 +7,7 @@ import TestParametersTab from './component/TestParametersTab';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatDate } from '../../../utils/helpers';
 import { useAllConfigurations,useAllTestParameters } from '../../../hooks/useWareHouse';
+import CreateConfigurationModal from './component/CreateConfigurationModal';
 
 const Configurations = () => {
   const { user } = useAuth();
@@ -14,7 +15,7 @@ const Configurations = () => {
   const [activeTab, setActiveTab] = useState('system');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('createdAt,desc');
-
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // API parameters
   const [configParams, setConfigParams] = useState({
@@ -47,7 +48,7 @@ const Configurations = () => {
 
 
   const { data: configurationsResponse, isLoading: isLoadingConfig, error: errorConfig } = useAllConfigurations(configParams);
-  const {data: parametersResponse, isLoading: isLoadingParams, error: errorParams} = useAllTestParameters();
+  const {data: parametersResponse, isLoading: isLoadingParams, error: errorParams} = useAllTestParameters({size:20, sort:'paramName,asc'});
   console.log('parametersResponse',parametersResponse);
   const systemConfigs = useMemo(() => {
     return configurationsResponse?.data?.values || [];
@@ -142,6 +143,25 @@ const Configurations = () => {
     }));
   }, []);
 
+  const openCreateModal =  useCallback(() => {
+    setShowCreateModal(true); 
+  }, []);
+  const closeCreateModal =  useCallback(() => {
+    setShowCreateModal(false); 
+  }, []);
+  // Handle khi tạo configuration thành công
+  const handleConfigurationCreated = useCallback((data) => {
+    console.log('Configuration created:', data);
+    // Đóng modal
+    closeCreateModal();
+    // Cập nhật lại danh sách cấu hình
+    setConfigParams(prev => ({
+      ...prev,
+      page: 0 // Quay về trang đầu tiên để thấy cấu hình mới thêm
+    }));
+  }, [closeCreateModal]);
+
+
 
   if (errorConfig || errorParams) {
     return (
@@ -224,12 +244,19 @@ const Configurations = () => {
                 <p className="text-sm text-gray-600">Quản lý và theo dõi tất cả cấu hình trong hệ thống</p>
               </div>
               {activeTab === 'system' && (
-                <button className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors">
+                <button 
+                  onClick={openCreateModal}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors">
                   <FaPlus className="w-4 h-4" />
                   Thêm Cấu hình mới
                 </button>
               )}
             </div>
+            <CreateConfigurationModal
+              isOpen={showCreateModal}
+              onClose={closeCreateModal}
+              onCreated={handleConfigurationCreated}
+            />
 
             {/* Tabs */}
             <div className="border-b border-gray-200 mb-4">

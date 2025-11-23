@@ -41,6 +41,14 @@ const warehouseService = {
             throw error;
         }
     },
+    deleteConfiguration: async (configId) => {
+        try {
+            const response = await apiClient.delete(API_ENDPOINTS.WAREHOUSE.DELETE_CONFIGURATION(configId));
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
     // check instrument status
 //     {
 //   "instrumentId": "INS-251112114411-30d5ae95-4571",
@@ -139,9 +147,15 @@ const warehouseService = {
             throw error;
         }
     },
-    getAllTestParameters: async () => {
+    getAllTestParameters: async (params) => {
         try {
-            const response = await apiClient.get(API_ENDPOINTS.WAREHOUSE.GET_ALL_TEST_PARAMETERS);
+            console.log('Fetching test parameters with params:', params);
+            if (!params) params = {
+                page: 0,
+                size: 20,
+                sort: 'paramName,asc'
+            };
+            const response = await apiClient.get(API_ENDPOINTS.WAREHOUSE.GET_ALL_TEST_PARAMETERS, { params });
             return response.data;
         } catch (error) {
             throw error;

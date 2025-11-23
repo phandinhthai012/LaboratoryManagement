@@ -4,18 +4,19 @@ import {
     FaArrowLeft, FaFlask, FaUser, FaCalendar, FaIdCard,
     FaCheckCircle, FaSpinner, FaTimes, FaEdit,
     FaPrint, FaPhone, FaEnvelope, FaMapMarkerAlt,
-    FaSave, FaMale, FaFemale, FaPlay, FaBan,
-    FaComments, FaPaperPlane, FaRobot,
-    FaUserCheck, FaStethoscope, FaComment // Thêm FaComment
+    FaSave, FaMale, FaFemale,
+    FaComments, FaPaperPlane,
+    FaStethoscope, FaComment // Thêm FaComment
 } from 'react-icons/fa';
 import MainLayout from '../../../layouts/MainLayout';
-import { formatDate } from '../../../utils/helpers';
+import { formatDate, formatDateWithTime } from '../../../utils/helpers';
 import { useTestOrderById, useTestOrder } from '../../../hooks/useTestOrder';
 import { useNotifier } from '../../../contexts/NotifierContext';
-
+import ConfirmDialog from '../../../components/ConfirmDialog';
 //comment section
 import CommentSection from './component/CommentSection';
 import CommentList from './component/CommentList';
+import SimulateAnalysisModal from './component/SimulateAnalysisModal';
 import { useTestComments } from '../../../hooks/useTestOrder';
 
 const TestOrderDetail = () => {
@@ -26,10 +27,10 @@ const TestOrderDetail = () => {
     const { data: testOrder, isLoading, isError } = useTestOrderById(id);
     console.log('Fetched test order:', testOrder, id);
     const {
-        updateTestOrder,
-        isUpdateLoading,
-        sendOrderToInstrument,
-        isSendOrderLoading,
+        // updateTestOrder,
+        // isUpdateLoading,
+        // isSendOrderLoading,
+        printTestResults,
         isPrintTestResultsLoading
     } = useTestOrder();
 
@@ -45,10 +46,10 @@ const TestOrderDetail = () => {
     }, [testOrder]);
 
     // Test Order
-    const canReview = () => {
-        return testOrder.status === 'COMPLETED' &&
-            (!testOrder.reviewStatus || testOrder.reviewStatus === 'NONE');
-    };
+    // const canReview = () => {
+    //     return testOrder?.status === 'COMPLETED' &&
+    //         (!testOrder?.reviewStatus || testOrder?.reviewStatus === 'NONE');
+    // };
 
     // Comment state
     const [comments, setComments] = useState([]);
@@ -61,46 +62,46 @@ const TestOrderDetail = () => {
         }
     }, [testOrder]);
 
-    const handleHumanReview = async () => {
-        if (!canReview()) {
-            showNotification('Đơn xét nghiệm không thể duyệt thủ công', 'error');
-            return;
-        }
-        try {
-            const data = {
-                // NONE, HUMAN_REVIEWED, AI_REVIEWED
-                status: testOrder.status,
-                reviewStatus: 'HUMAN_REVIEWED',
-                reviewMode: 'HUMAN',
-            }
-            await updateTestOrder({
-                testOrderCode: testOrder.orderCode,
-                data: data
-            });
-        } catch (error) {
-        }
-    }
-    const handleAIReview = async () => {
-        if (!canReview()) {
-            showNotification('Đơn xét nghiệm không thể duyệt tự động', 'error');
-            return;
-        }
-        try {
-            const data = {
-                // NONE, HUMAN_REVIEWED, AI_REVIEWED
-                status: testOrder.status,
-                reviewStatus: 'AI_REVIEWED',
-                reviewMode: 'AI',
-            }
-            await updateTestOrder({
-                testOrderCode: testOrder.orderCode,
-                data: data
-            });
-        } catch (error) {
-        }
-    }
+    // const handleHumanReview = async () => {
+    //     if (!canReview()) {
+    //         showNotification('Đơn xét nghiệm không thể duyệt thủ công', 'error');
+    //         return;
+    //     }
+    //     try {
+    //         const data = {
+    //             // NONE, HUMAN_REVIEWED, AI_REVIEWED
+    //             status: testOrder?.status,
+    //             reviewStatus: 'HUMAN_REVIEWED',
+    //             reviewMode: 'HUMAN',
+    //         }
+    //         await updateTestOrder({
+    //             testOrderCode: testOrder?.orderCode,
+    //             data: data
+    //         });
+    //     } catch (error) {
+    //     }
+    // }
+    // const handleAIReview = async () => {
+    //     if (!canReview()) {
+    //         showNotification('Đơn xét nghiệm không thể duyệt tự động', 'error');
+    //         return;
+    //     }
+    //     try {
+    //         const data = {
+    //             // NONE, HUMAN_REVIEWED, AI_REVIEWED
+    //             status: testOrder?.status,
+    //             reviewStatus: 'AI_REVIEWED',
+    //             reviewMode: 'AI',
+    //         }
+    //         await updateTestOrder({
+    //             testOrderCode: testOrder?.orderCode,
+    //             data: data
+    //         });
+    //     } catch (error) {
+    //     }
+    // }
     const getReviewStatus = () => {
-        switch (testOrder.reviewStatus) {
+        switch (testOrder?.reviewStatus) {
             case 'NONE':
                 return 'Chưa được duyệt';
             case 'HUMAN_REVIEWED':
@@ -113,11 +114,11 @@ const TestOrderDetail = () => {
     }
 
     const canGetResult = () => {
-        if (!testOrder.testType || !testOrder.testType.testParameters || testOrder.testType.testParameters.length === 0) {
+        if (!testOrder?.testType || !testOrder?.testType?.testParameters || testOrder?.testType?.testParameters?.length === 0) {
             console.log('Không thể lấy kết quả: Không có tham số xét nghiệm');
             return false;
         }
-        // if (testOrder.status !== 'COMPLETED') {
+        // if (testOrder?.status !== 'COMPLETED') {
         //     console.log('Không thể lấy kết quả: Đơn chưa hoàn thành');
         //     return false;
         // }
@@ -125,15 +126,17 @@ const TestOrderDetail = () => {
         return true;
     }
 
+    const [openGetResultConfirm, setOpenGetResultConfirm] = useState(false);
+    const openGetResultConfirmDialog = useCallback(() => {
+        setOpenGetResultConfirm(true);
+    }, []);
+    const closeGetResultConfirmDialog = useCallback(() => {
+        setOpenGetResultConfirm(false);
+    }, []);
 
-    const sendOrderToGetResult = async () => {
-        try {
-            console.log('Sending order to instrument, order ID:', testOrder.id);
-            await sendOrderToInstrument(testOrder.id);
-        } catch (error) {
-            showNotification('Không thể gửi đơn xét nghiệm đến thiết bị', 'error');
-        }
-    }
+    const sendOrderToGetResult = useCallback(async () => {
+       
+    }, []);
 
     const getStatusText = (status) => {
         switch (status) {
@@ -261,6 +264,46 @@ const TestOrderDetail = () => {
         }
     };
 
+    const canPrintResult = useMemo(() => {
+        return testOrder?.status === 'COMPLETED';
+    }, [testOrder?.status]);
+
+    const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+
+    const openPrintDialog = () => {
+
+        setIsPrintDialogOpen(true);
+    };
+
+    const closePrintDialog = () => {
+        setIsPrintDialogOpen(false);
+    };
+
+
+    const handlePrintResult = useCallback(async () => {
+        if (!canPrintResult) {
+            showNotification('Chỉ có thể in kết quả cho đơn đã hoàn thành', 'error');
+            closePrintDialog();
+            return;
+        }
+        try {
+            const result = await printTestResults({
+                testOrderId: testOrder?.id,
+                data: {
+                    customFileName: `KetQua_XetNghiem_${testOrder?.orderCode}_${formatDateWithTime(new Date())}`
+                }
+            })
+            console.log('Print result response:', result);
+        } catch (error) {
+            showNotification(`In kết quả xét nghiệm thất bại: ${error.message}`, 'error');
+        }finally {
+            // closePrintDialog();
+        }
+    }, [canPrintResult, testOrder?.id, testOrder?.orderCode, printTestResults, showNotification]);
+
+
+
+
     if (isLoading) return <MainLayout><div className="flex justify-center p-8"><FaSpinner className="animate-spin text-2xl" /></div></MainLayout>;
     if (isError || !testOrder) return <MainLayout><div className="text-red-500 p-8">Không thể tải thông tin đơn xét nghiệm</div></MainLayout>;
 
@@ -301,7 +344,7 @@ const TestOrderDetail = () => {
                                     </span>
                                 </div>
                                 <button
-                                    onClick={()=>{}}
+                                    onClick={openPrintDialog}
                                     disabled={ isPrintTestResultsLoading}
                                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 shadow-sm transition-colors"
                                 >
@@ -311,6 +354,15 @@ const TestOrderDetail = () => {
                             </div>
                         </div>
                     </div>
+                    <ConfirmDialog
+                        isOpen={isPrintDialogOpen}
+                        onClose={closePrintDialog}
+                        onConfirm={handlePrintResult}
+                        isLoading={isPrintTestResultsLoading}
+                        title='Xác nhận in kết quả xét nghiệm'
+                        message='Bạn có chắc chắn muốn in kết quả xét nghiệm cho đơn này không?'
+                        type='info'
+                    />
 
                     <div className="mt-6 bg-white rounded-lg shadow-md p-6">
                         {/* Patient Information */}
@@ -366,7 +418,7 @@ const TestOrderDetail = () => {
                             <h2 className="text-xl font-semibold flex items-center">
                                 <FaIdCard className="mr-2 text-green-600" /> Thông tin đơn
                             </h2>
-                            <div className="mb-4 border-b pb-2">
+                            {/* <div className="mb-4 border-b pb-2">
                                 {canReview() ? (
                                     <div className="flex justify-end space-x-2">
                                         <button
@@ -407,7 +459,7 @@ const TestOrderDetail = () => {
                                         </span>
                                     </div>
                                 )}
-                            </div>
+                            </div> */}
                             <div className="space-y-3">
                                 <div>
                                     <span className="text-sm text-gray-600">Mã đơn:</span>
@@ -432,7 +484,7 @@ const TestOrderDetail = () => {
                                 <div>
                                     <span className="text-sm text-gray-600">Trạng thái duyệt:</span>
                                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(testOrder.reviewStatus)}`}>
-                                        {getReviewStatus(testOrder.reviewStatus)}
+                                        {getReviewStatus()}
                                     </span>
                                 </div>
                                 <div>
@@ -520,22 +572,20 @@ const TestOrderDetail = () => {
                             </h2>
                             {canGetResult() ? (
                                 <button
-                                    onClick={sendOrderToGetResult}
-                                    disabled={isSendOrderLoading}
+                                    onClick={openGetResultConfirmDialog}
                                     className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center text-sm transition-colors"
                                 >
-                                    {isSendOrderLoading ? (
-                                        <>
-                                            <FaSpinner className="animate-spin mr-1" size={12} /> Đang gửi...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <FaPaperPlane className="mr-1" size={12} /> Gửi đến thiết bị
-                                        </>
-                                    )}
+                                    <FaPaperPlane className="mr-1" size={12} /> Phân tích kết quả
+                                   
                                 </button>
                             ) : null}
                         </div>
+                        <SimulateAnalysisModal
+                            isOpen={openGetResultConfirm}
+                            onClose={closeGetResultConfirmDialog}
+                            testOrder={testOrder}
+                            onResultsUpdated={sendOrderToGetResult}
+                        />
 
                         <div className="overflow-x-auto max-h-96 overflow-y-auto">
                             <table className="w-full table-auto">

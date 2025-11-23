@@ -16,7 +16,7 @@ import { useNotifier } from '../../../contexts/NotifierContext';
 const Patients = () => {
     const { user: userAuth } = useAuth();
     const [paginationParams, setPaginationParams] = useState({
-        sort: ['fullName,desc'],
+        sort: ['createdAt,desc'],
         page: 0,
         size: 10,
         search: '',
@@ -361,6 +361,8 @@ const Patients = () => {
                                 >
                                     <option value="fullName,asc">Tên (A → Z)</option>
                                     <option value="fullName,desc">Tên (Z → A)</option>
+                                    <option value="createdAt,asc">Ngày Tạo (Cũ → Mới)</option>
+                                    <option value="createdAt,desc">Ngày Tạo (Mới → Cũ)</option>
                                     <option value="dateOfBirth,asc">Tuổi (Thấp → Cao)</option>
                                     <option value="dateOfBirth,desc">Tuổi (Cao → Thấp)</option>
                                 </select>
@@ -377,7 +379,7 @@ const Patients = () => {
                                         });
                                         setPaginationParams({
                                             ...paginationParams,
-                                            sort: ['fullName', 'asc'],
+                                            sort: ['createdAt', 'desc'],
                                             page: 0,
                                         });
                                     }}>
@@ -525,13 +527,13 @@ const Patients = () => {
                                                     >
                                                         <FaEdit className="w-4 h-4" />
                                                     </button>
-                                                    <button
+                                                    {/* <button
                                                         onClick={() => handleCreateTest(patient)}
                                                         className="text-purple-600 hover:text-purple-900 p-2 hover:bg-purple-50 rounded-lg transition-colors"
                                                         title="Tạo Xét Nghiệm"
                                                     >
                                                         <FaFlask className="w-4 h-4" />
-                                                    </button>
+                                                    </button> */}
                                                     <button
                                                         onClick={() => openConfirmDeleteModal(patient)}
                                                         className="text-red-600 hover:text-red-900 p-1"

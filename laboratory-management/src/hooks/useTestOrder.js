@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNotifier } from '../contexts/NotifierContext';
 import testOrderService from '../services/testOrderService';
 
-const querykeys = {
+export const querykeys = {
     testOrderDetails: (testOrderId) => ['testOrder', testOrderId],
     testOrderItemsDetail: (testOrderId, testOrderItemId) => ['testOrderItems', testOrderId, testOrderItemId],
     listTestOrders: (params) => ['testOrders', params],
@@ -91,9 +91,26 @@ export const useTestOrder = () => {
             const response = await testOrderService.createTestOrder(data);
             return response.data;
         },
-        onSuccess: () => {
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({ queryKey: ['testOrders'] });
             showNotification('Tạo đơn xét nghiệm thành công', 'success');
-            queryClient.invalidateQueries({ queryKey: ['testOrders'] });
+           
+        },
+        onError: (error) => {
+            showNotification(`Tạo đơn xét nghiệm thất bại: ${error.message}`, 'error');
+        }
+    });
+
+    const createTestTypeMutation  = useMutation({
+        mutationFn: async (data) => {
+            const response = await testOrderService.createTestType(data);
+            return response.data;
+        },
+        onSuccess: () => {
+            showNotification('Tạo loại xét nghiệm thành công', 'success');
+        },
+        onError: (error) => {
+            showNotification(`Tạo loại xét nghiệm thất bại: ${error.message}`, 'error');
         }
     });
 
@@ -143,21 +160,34 @@ export const useTestOrder = () => {
         }
     });
 
-    const sendOrderToInstrumentMutation = useMutation({
-        mutationFn: async (testOrderId) => {
-            const response = await testOrderService.sendOrderToInstrument(testOrderId);
-            console.log('sendOrderToInstrument response:', response);
+    const printTestResultsMutation = useMutation({
+        mutationFn: async ({ testOrderId, data }) => {
+            const response = await testOrderService.printTestResults(testOrderId, data);
             return response.data;
         },
-        onSuccess: () => {
-            showNotification('Gửi đơn xét nghiệm đến thiết bị thành công', 'success');
-            queryClient.invalidateQueries({ queryKey: ['testOrder'] });
+        onSuccess: async (data) => {
+            const jobResponse = await testOrderService.getReportJobStatus(data.jobId);
+            console.log('Report job status:', jobResponse);
+            const jobData = jobResponse.data;
+            if (jobData.status === 'SUCCEEDED' && jobData.resultFile) {
+                // Auto download the PDF file
+                const downloadUrl = jobData.resultFile.objectKey;
+                const fileName = jobData.resultFile.fileName;
+                
+                downloadFile(downloadUrl, fileName);
+                
+                showNotification('In kết quả xét nghiệm thành công và tự động tải về', 'success');
+            } else if (jobData.status === 'FAILED') {
+                showNotification('Tạo file PDF thất bại', 'error');
+            } else {
+                showNotification('File đang được tạo, vui lòng thử lại sau', 'info');
+            }
         },
         onError: (error) => {
-            console.error('Send to instrument mutation error:', error);
-            showNotification(`Gửi đơn xét nghiệm đến thiết bị thất bại: ${error.message}`, 'error');
+            showNotification(`In kết quả xét nghiệm thất bại: ${error.message}`, 'error');
         }
     });
+
    
 
     return {
@@ -166,6 +196,9 @@ export const useTestOrder = () => {
 
         createTestOrder: createTestOrderMutation.mutateAsync,
         isCreateLoading: createTestOrderMutation.isPending,
+
+        createTestType: createTestTypeMutation.mutateAsync,
+        isCreateTestTypeLoading: createTestTypeMutation.isPending,
 
         updateTestOrder: updateTestOrderMutation.mutateAsync,
         isUpdateLoading: updateTestOrderMutation.isPending,
@@ -176,11 +209,8 @@ export const useTestOrder = () => {
         updateTestOrderItem: updateTestOrderItemMutation.mutateAsync,
         isUpdateItemLoading: updateTestOrderItemMutation.isPending,
 
-        sendOrderToInstrument: sendOrderToInstrumentMutation.mutateAsync,
-        isSendOrderLoading: sendOrderToInstrumentMutation.isPending,
-
-        // printTestResults: printTestResultsMutation.mutateAsync,
-        // isPrintTestResultsLoading: printTestResultsMutation.isPending,
+        printTestResults: printTestResultsMutation.mutateAsync,
+        isPrintTestResultsLoading: printTestResultsMutation.isPending,
     };
 }
 

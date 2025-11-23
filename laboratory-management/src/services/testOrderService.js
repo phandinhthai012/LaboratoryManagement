@@ -3,16 +3,16 @@ import { API_ENDPOINTS } from "../config/api";
 
 const testOrderService = {
 
-    getAllTestOrders: async(params) => {
+    getAllTestOrders: async (params) => {
         try {
             console.log("Params in service:", params);
-            const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_ALL_TEST_ORDERS, {params});
+            const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_ALL_TEST_ORDERS, { params });
             return response.data;
         } catch (error) {
             throw error;
         }
     },
-    getTestOrderById: async(orderId) => {
+    getTestOrderById: async (orderId) => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_TEST_ORDER_BY_ID(orderId));
             return response.data;
@@ -20,20 +20,58 @@ const testOrderService = {
             throw error;
         }
     },
-    createTestOrder: async(data) => {
+    createTestOrder: async (data) => {
         try {
-            if(!data.medicalRecordCode) {
+            //             "medicalRecordCode": "MRC-251015211655-156851-688",
+            //   "testTypeId": "TTID-251120092450-df5c48ab-2515"
+            if (!data.medicalRecordCode) {
                 throw new Error("Missing required field: medicalRecordCode");
             }
+            if
+                (!data.testTypeId) {
+                throw new Error("Missing required field: testTypeId");
+            }
             const response = await apiClient.post(API_ENDPOINTS.TESTORDER.CREATE_TEST_ORDER, {
-                medicalRecordCode: data.medicalRecordCode
+                medicalRecordCode: data.medicalRecordCode,
+                testTypeId: data.testTypeId
             });
             return response.data;
         } catch (error) {
             throw error;
         }
     },
-    viewTestOrder: async(testOrderId) => {
+    createTestType: async (data) => {
+        try {
+            //             {
+            //   "name": "Huyết học lần 3",
+            //   "description": "Xét nghiệm công thức máu cao",
+            //   "testParameterIds": [
+            //     "TP-251117171840-c65455a6-1549",
+            //     "TP-251117172119-805741b6-3765"
+            //   ],
+            //   "reagentName": "Lysing", 
+            //   "requiredVolume": 50
+            // }
+            const {
+                name,
+                description,
+                testParameterIds,
+                reagentName,
+                requiredVolume
+            } = data;
+            const response = await apiClient.post(API_ENDPOINTS.TESTORDER.CREATE_TEST_TYPE, {
+                name: name,
+                description: description,
+                testParameterIds: testParameterIds,
+                reagentName: reagentName,
+                requiredVolume: requiredVolume
+            });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+    viewTestOrder: async (testOrderId) => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.VIEW_DETAIL_TEST_ORDER(testOrderId));
             return response.data;
@@ -41,7 +79,7 @@ const testOrderService = {
             throw error;
         }
     },
-    deleteTestOrder: async(testOrderId) => {
+    deleteTestOrder: async (testOrderId) => {
         try {
             const response = await apiClient.delete(API_ENDPOINTS.TESTORDER.DELETE_TEST_ORDER(testOrderId));
             return response.data;
@@ -49,7 +87,7 @@ const testOrderService = {
             throw error;
         }
     },
-    viewTestOrderItem: async(testOrderId, itemId) => {
+    viewTestOrderItem: async (testOrderId, itemId) => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.VIEW_TEST_ORDER_ITEM(testOrderId, itemId));
             return response.data;
@@ -57,10 +95,10 @@ const testOrderService = {
             throw error;
         }
     },
-    printTestResults: async(testOrderId, data) => {
+    printTestResults: async (testOrderId, data) => {
         try {
             const { customFileName } = data;
-            if(!customFileName ) {
+            if (!customFileName) {
                 throw new Error("Missing required fields: customFileName or customSavePath");
             }
             const response = await apiClient.post(API_ENDPOINTS.TESTORDER.PRINT_TEST_RESULTS(testOrderId), {
@@ -72,9 +110,9 @@ const testOrderService = {
             throw error;
         }
     },
-    addTestOrderItem: async(data) => {
+    addTestOrderItem: async (data) => {
         try {
-             const { testOrderId, testName } = data;
+            const { testOrderId, testName } = data;
             const response = await apiClient.post(API_ENDPOINTS.TESTORDER.ADD_TEST_ORDER_ITEM(testOrderId), {
                 testName: testName
             });
@@ -83,7 +121,7 @@ const testOrderService = {
             throw error;
         }
     },
-    updateTestOrderByCode: async(testOrderCode, updatedData) => {
+    updateTestOrderByCode: async (testOrderCode, updatedData) => {
         try {
             const { status, reviewStatus, reviewMode } = updatedData;
 
@@ -97,7 +135,7 @@ const testOrderService = {
             throw error;
         }
     },
-    updateTestOrderItem: async(testOrderId, itemId, updatedData) => {
+    updateTestOrderItem: async (testOrderId, itemId, updatedData) => {
         try {
             const { testName, status } = updatedData;
             const response = await apiClient.put(API_ENDPOINTS.TESTORDER.UPDATE_TEST_ORDER_ITEM(testOrderId, itemId), {
@@ -109,7 +147,7 @@ const testOrderService = {
             throw error;
         }
     },
-    getAllTestCatalogs: async() => {
+    getAllTestCatalogs: async () => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_ALL_TEST_CATALOGS);
             return response.data;
@@ -117,14 +155,14 @@ const testOrderService = {
             throw error;
         }
     },
-    createComment: async(data) => {
+    createComment: async (data) => {
         try {
             const {
                 targetId,
                 targetType,
                 content
-            }= data;
-            if(!targetId || !targetType || !content) {
+            } = data;
+            if (!targetId || !targetType || !content) {
                 throw new Error("Missing required fields: targetId, targetType, or content");
             }
             const response = await apiClient.post(API_ENDPOINTS.COMMENTS.CREATE_COMMENT, data);
@@ -133,12 +171,12 @@ const testOrderService = {
             throw error;
         }
     },
-    modifyComment: async(commentId, updatedData) => {
+    modifyComment: async (commentId, updatedData) => {
         try {
             const {
                 newContent
             } = updatedData;
-            if(!newContent) {
+            if (!newContent) {
                 throw new Error("Missing required field: newContent");
             }
             const response = await apiClient.put(API_ENDPOINTS.COMMENTS.MODIFY_COMMENT(commentId), updatedData);
@@ -147,9 +185,9 @@ const testOrderService = {
             throw error;
         }
     },
-    deleteComment: async(commentId) => {
+    deleteComment: async (commentId) => {
         try {
-            const response = await apiClient.post(API_ENDPOINTS.COMMENTS.DELETE_COMMENT(commentId),{
+            const response = await apiClient.post(API_ENDPOINTS.COMMENTS.DELETE_COMMENT(commentId), {
                 deleteReason: "Inappropriate content"
             });
             return response.data;
@@ -157,10 +195,10 @@ const testOrderService = {
             throw error;
         }
     },
-    replyComment: async(commentId, replyData) => {
+    replyComment: async (commentId, replyData) => {
         try {
-            const {content} = replyData;
-            if(!content) {
+            const { content } = replyData;
+            if (!content) {
                 throw new Error("Missing required field: content");
             }
             const response = await apiClient.post(API_ENDPOINTS.COMMENTS.REPLY_COMMENT(commentId), replyData);
@@ -169,7 +207,7 @@ const testOrderService = {
             throw error;
         }
     },
-    sendOrderToInstrument: async(testOrderId) => {
+    sendOrderToInstrument: async (testOrderId) => {
         try {
             const response = await apiClient.post(API_ENDPOINTS.TESTORDER.SEND_ORDER_TO_INSTRUMENT(testOrderId));
             return response.data;
@@ -177,7 +215,7 @@ const testOrderService = {
             throw error;
         }
     },
-    getReportJobStatus: async(jobId) => {
+    getReportJobStatus: async (jobId) => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_REPORT_JOB_STATUS(jobId));
             return response.data;

@@ -88,7 +88,7 @@ const ConfirmDialog = ({
               {isLoading ? (
                 <div className="flex items-center space-x-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  <span>Đang xóa...</span>
+                  <span>Đang thực hiện...</span>
                 </div>
               ) : (
                 confirmText
