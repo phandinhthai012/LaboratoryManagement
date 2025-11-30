@@ -9,6 +9,7 @@ import { StatisticCard } from './component/StatisticCard';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import TestOrderCreateModal from './component/TestOrderCreateModal';
 import TestOrderUpdateModal from './component/TestOrderUpdateModal';
+import ExportExcelModal from './component/ExportExcelModal';
 const Tests = () => {
     const today = formatDate(new Date());
     const { user } = useAuth();
@@ -30,9 +31,9 @@ const Tests = () => {
         isOpen: false,
         testOrderId: null,
     });
-
+    const [showExportExcelModal, setShowExportExcelModal] = useState(false);
     const { data: responseTestOrders, isLoading } = useTestOrdersList(paginationParams);
-    const { deleteTestOrder, isDeleteLoading } = useTestOrder();
+    const { deleteTestOrder, isDeleteLoading, exportExcelTestOrders, isExportExcelTestOrdersLoading } = useTestOrder();
 
     const testOrders = responseTestOrders?.data?.values || [];
     const paginationInfo = {
@@ -177,6 +178,26 @@ const Tests = () => {
             time: date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
         };
     }, []);
+
+    const openExportExcelModal = () => {
+        setShowExportExcelModal(true);
+    };
+
+    const closeExportExcelModal = () => {
+        setShowExportExcelModal(false);
+    };
+    const handleExportExcel = async (exportParams) => {
+        try {
+            const response = await exportExcelTestOrders(exportParams);
+            // Handle the response if needed
+            closeExportExcelModal();
+        } catch (error) {
+            console.error('Error exporting test orders to Excel:', error);
+        }finally {
+            // Any cleanup actions if needed
+        }
+    }
+
     return (
         <MainLayout>
             <div>
@@ -256,14 +277,30 @@ const Tests = () => {
                                 <h2 className="text-lg font-semibold text-gray-900">Đơn Xét Nghiệm</h2>
                                 <p className="text-sm text-gray-600">Theo dõi và quản lý tất cả đơn xét nghiệm và mẫu</p>
                             </div>
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition-colors"
-                            >
-                                <FaPlus className="w-4 h-4" />
-                                Đơn Xét Nghiệm Mới
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={openExportExcelModal}
+                                    className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    Xuất Excel
+                                </button>
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors"
+                                >
+                                    <FaPlus className="w-4 h-4" />
+                                    Đơn Xét Nghiệm Mới
+                                </button>
+                            </div>
                         </div>
+                        <ExportExcelModal
+                            isOpen={showExportExcelModal}
+                            onClose={closeExportExcelModal}
+                            onExport={handleExportExcel}
+                            isExporting={isExportExcelTestOrdersLoading}
+                        />
 
                         {/* Search and Filter */}
                         <div className="flex flex-col md:flex-row gap-4">

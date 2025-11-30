@@ -53,7 +53,7 @@ const Configurations = () => {
   const systemConfigs = useMemo(() => {
     return configurationsResponse?.data?.values || [];
   }, [configurationsResponse?.data?.values]);
-  
+  console.log('systemConfigs',systemConfigs);
   const parametersValues = useMemo(() => {
     return parametersResponse?.data?.values || [];
   }, [parametersResponse?.data?.values]);
@@ -85,20 +85,27 @@ const Configurations = () => {
       const activeConfigs = systemConfigs.filter(c => !c.isDeleted);
       const inactiveConfigs = systemConfigs.filter(c => c.isDeleted);
       
-      // Group by dataType
-      const dataTypeGroups = systemConfigs.reduce((acc, config) => {
-        const type = config.dataType;
+      // Group by configType
+      const configTypeGroups = systemConfigs.reduce((acc, config) => {
+        const type = config.configType || 'GENERAL';
         acc[type] = (acc[type] || 0) + 1;
         return acc;
       }, {});
+
+      // Count configurations with instruments
+      const instrumentConfigs = systemConfigs.filter(c => c.instrumentModel || c.instrumentType);
+      const settingsConfigs = systemConfigs.filter(c => c.settings && Object.keys(c.settings).length > 0);
+      const versionedConfigs = systemConfigs.filter(c => c.version && c.version.trim());
 
       return {
         total: systemConfigs.length,
         active: activeConfigs.length,
         inactive: inactiveConfigs.length,
-        jsonConfigs: dataTypeGroups['JSON'] || 0,
-        stringConfigs: dataTypeGroups['STRING'] || 0,
-        booleanConfigs: dataTypeGroups['BOOLEAN'] || 0
+        specificConfigs: configTypeGroups['SPECIFIC'] || 0,
+        generalConfigs: configTypeGroups['GENERAL'] || 0,
+        instrumentConfigs: instrumentConfigs.length,
+        settingsConfigs: settingsConfigs.length,
+        versionedConfigs: versionedConfigs.length
       };
     } else {
       // Test parameters statistics
@@ -204,7 +211,7 @@ const Configurations = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className={`grid grid-cols-1 gap-4 mb-8 ${activeTab === 'system' ? 'md:grid-cols-6' : 'md:grid-cols-4'}`}>
           <StatisticCard
             title={activeTab === 'system' ? 'Tổng Cấu hình' : 'Tổng Thông số'}
             value={stats.total}
@@ -226,13 +233,39 @@ const Configurations = () => {
             iconColor="text-red-400"
             valueColor="text-red-600"
           />
-          <StatisticCard
-            title={activeTab === 'system' ? 'Loại JSON' : 'Có khoảng tham chiếu'}
-            value={activeTab === 'system' ? stats.jsonConfigs : stats.withRanges}
-            icon={activeTab === 'system' ? FaServer : FaFlask}
-            iconColor="text-purple-400"
-            valueColor="text-purple-600"
-          />
+          {activeTab === 'system' ? (
+            <>
+              <StatisticCard
+                title="Cấu hình Chuyên biệt"
+                value={stats.specificConfigs}
+                icon={FaServer}
+                iconColor="text-purple-400"
+                valueColor="text-purple-600"
+              />
+              <StatisticCard
+                title="Có Thiết bị"
+                value={stats.instrumentConfigs}
+                icon={FaFlask}
+                iconColor="text-orange-400"
+                valueColor="text-orange-600"
+              />
+              <StatisticCard
+                title="Có Cài đặt"
+                value={stats.settingsConfigs}
+                icon={FaShieldAlt}
+                iconColor="text-indigo-400"
+                valueColor="text-indigo-600"
+              />
+            </>
+          ) : (
+            <StatisticCard
+              title="Có khoảng tham chiếu"
+              value={stats.withRanges}
+              icon={FaFlask}
+              iconColor="text-purple-400"
+              valueColor="text-purple-600"
+            />
+          )}
         </div>
 
         {/* Main Content */}

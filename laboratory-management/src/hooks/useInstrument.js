@@ -51,9 +51,26 @@ const useInstrument = () => {
             showNotification(`Khởi tạo phân tích mẫu thất bại: ${error.message}`, 'error');
         },
     });
+
+    const changeInstrumentMode = useMutation({
+        mutationFn: async ({ instrumentCode, modeData }) => {
+            const response = await instrumentService.changeInstrumentMode(instrumentCode, modeData);
+            return response.data;
+        },
+        onSuccess: async (data) => {
+            showNotification('Thay đổi chế độ thiết bị thành công', 'success');
+            await queryClient.invalidateQueries({ queryKey: ['instruments'] });
+        },
+        onError: (error) => {
+            showNotification(`Thay đổi chế độ thiết bị thất bại: ${error.message}`, 'error');
+        },
+    });
+
     return {
         initiateSampleAnalysis: initiateSampleAnalysis.mutateAsync,
-        isLoadingInitiateSampleAnalysis: initiateSampleAnalysis.isLoading,
+        isLoadingInitiateSampleAnalysis: initiateSampleAnalysis.isPending,
+        changeInstrumentMode: changeInstrumentMode.mutateAsync,
+        isLoadingChangeInstrumentMode: changeInstrumentMode.isPending,
     };
 }
 

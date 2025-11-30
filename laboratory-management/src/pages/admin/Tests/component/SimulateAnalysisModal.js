@@ -57,7 +57,7 @@ const SimulateAnalysisModal = ({ isOpen, onClose, testOrder, onResultsUpdated })
             await initiateSampleAnalysis(payload);
             
             // Refresh data và đóng modal
-            // onResultsUpdated?.();
+            await onResultsUpdated?.();
             
             // Auto close after success
             setTimeout(() => {

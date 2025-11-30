@@ -542,6 +542,7 @@ const Devices = () => {
               console.error('Add instrument failed', err);
             }
           }}
+          isLoadingAddNew={isAddingInstrument}
         />
         <ModalCheckStatus
           isOpen={checkStatusModalOpen}

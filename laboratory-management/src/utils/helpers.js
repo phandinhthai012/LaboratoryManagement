@@ -7,6 +7,20 @@ export const formatDate = (dateString) => {
   return new Date(dateString).toLocaleDateString(undefined, options);
 }
 
+export const formatDateTime = (dateString) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  const options = { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  };
+  return date.toLocaleDateString('vi-VN', options);
+}
+
 export async function encryptPassword(password) {
   // Gọi API để lấy public key
   const res = await apiClient.get("/api/v1/iam/auth/public-key");

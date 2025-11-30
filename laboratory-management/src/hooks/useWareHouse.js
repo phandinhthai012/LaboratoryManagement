@@ -7,7 +7,11 @@ const querykeys = {
   // instrumentStatus: ['warehouse', 'instrumentStatus'],
   allConfigurations: (params) => ['warehouse', 'configurations', params],
   configurationDetails: (configId) => ['warehouse', 'configuration', configId],
-  testParameters: (params) => ['warehouse', 'testParameters', params]
+  testParameters: (params) => ['warehouse', 'testParameters', params],
+  reagantHistory: (params) => ['warehouse', 'reagantHistory', params],
+  reagantHistoryById: (historyId) => ['warehouse', 'reagantHistory', historyId],
+  AllVendor: (params) => ['warehouse', 'vendors', params],
+  allReagentTypes: () => ['warehouse', 'reagentTypes']
 };
 
 // Hook for fetching all instruments
@@ -50,6 +54,43 @@ export const useConfigurationDetails = (configId) => {
   });
 };
 
+export const useReagantHistory = (param = {}) => {
+  return useQuery({
+    queryKey: querykeys.reagantHistory(param),
+    queryFn: () => warehouseService.getAllReagantHistory(param),
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    keepPreviousData: true, // Giữ dữ liệu cũ khi param thay đổi
+  });
+}
+
+export const useReagantHistoryById = (historyId) => {
+  return useQuery({
+    queryKey: querykeys.reagantHistoryById(historyId),
+    queryFn: () => warehouseService.getReagantHistoryById(historyId),
+    enabled: !!historyId, // Chỉ chạy khi có historyId
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+export const useAllReagentTypes = () => {
+  return useQuery({
+    queryKey: querykeys.allReagentTypes(),
+    queryFn: () => warehouseService.getAllReagentTypes(),
+    staleTime: 60 * 60 * 1000, // 1 hour
+  });
+}
+
+
+export const useAllVendors = (param = {}) => {
+  return useQuery({
+    queryKey: querykeys.AllVendor(param),
+    queryFn: () => warehouseService.getAllVendors(param),
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    keepPreviousData: true, // Giữ dữ liệu cũ khi param thay đổi
+  });
+}
+
+
 // Main warehouse hook with mutations
 export const useWareHouse = () => {
   const { showNotification } = useNotifier();
@@ -58,9 +99,10 @@ export const useWareHouse = () => {
   // Add instrument mutation
   const addInstrumentMutation = useMutation({
     mutationFn: (instrumentData) => warehouseService.addInstrument(instrumentData),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['warehouse', 'instruments'] });
       showNotification('Thêm thiết bị thành công', 'success');
-      queryClient.invalidateQueries({ queryKey: ['warehouse', 'instruments'] });
+      
     },
     onError: (error) => {
       showNotification(`Thêm thiết bị thất bại: ${error.message}`, 'error');
@@ -146,6 +188,18 @@ export const useWareHouse = () => {
       showNotification(`Xóa cấu hình thất bại: ${error.message}`, 'error');
     },
   });
+  // ReceiveReagantHistoryForVendorSupply
+  const receiveReagantHistoryForVendorSupplyMutation = useMutation({
+    mutationFn: (data) => warehouseService.receiveReagantHistory(data),
+    onSuccess: async  () => {
+      await queryClient.invalidateQueries({ queryKey: ['warehouse', 'reagantHistory'] });
+      showNotification('Nhận hóa chất thành công', 'success');
+    },
+    onError: (error) => {
+      showNotification(`Nhận hóa chất thất bại: ${error.message}`, 'error');
+    },
+  });
+
 
   return {
     // Instrument operations
@@ -170,6 +224,10 @@ export const useWareHouse = () => {
 
     deleteConfiguration: deleteConfigurationMutation.mutateAsync,
     isDeletingConfiguration: deleteConfigurationMutation.isPending,
+
+    // Receive Reagant History
+    receiveReagantHistoryForVendorSupply: receiveReagantHistoryForVendorSupplyMutation.mutateAsync,
+    isReceivingReagantHistoryForVendorSupply: receiveReagantHistoryForVendorSupplyMutation.isPending,
   };
 };
 

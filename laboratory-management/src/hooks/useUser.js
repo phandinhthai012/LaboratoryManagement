@@ -116,3 +116,20 @@ export const useDeleteUser = () => {
     },
   });
 };
+
+export const useAdminCreateUser = () => {
+  const queryClient = useQueryClient();
+  const { showNotification } = useNotifier();
+  return useMutation({
+    mutationFn: (userData) => userService.adminCreateUser(userData),
+    onSuccess: () => {
+      showNotification('Admin created user successfully', 'success');
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error) => {
+      console.error('Error admin creating user:', error);
+      const message = error.response?.data?.message || 'Failed to admin create user';
+      showNotification(message, 'error');
+    },
+  });
+}

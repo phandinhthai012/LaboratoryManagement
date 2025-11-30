@@ -30,7 +30,7 @@ const UserDetailModal = ({
     const { user: userAuth } = useAuth();
     console.log("UserDetailModal - userData:", userData);
     const [userDetail, setUserDetail] = useState(null);
-    const [showDeleteDialog,setShowDeleteDialog] = useState(false);
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     useEffect(() => {
         if (userData) {
@@ -66,7 +66,7 @@ const UserDetailModal = ({
     };
 
     const handleDelete = () => {
-        if(onDelete && userDetail){
+        if (onDelete && userDetail) {
             onDelete(userDetail);
         }
     };
@@ -91,7 +91,7 @@ const UserDetailModal = ({
                             </div>
                             <div>
                                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                                    Thông Tin Chi Tiết 
+                                    Thông Tin Chi Tiết
                                 </h3>
                                 <p className="text-xs sm:text-sm text-gray-600">
                                     Xem thông tin người dùng
@@ -130,7 +130,7 @@ const UserDetailModal = ({
 
                     {/* Content */}
                     <div className="p-4 sm:p-6 max-h-[80vh] sm:max-h-96 overflow-y-auto">
-                        
+
                         {/* Loading State */}
                         {isLoading && (
                             <div className="flex items-center justify-center py-12">
@@ -171,7 +171,7 @@ const UserDetailModal = ({
                                 <div className="mb-6">
                                     <h4 className="text-base sm:text-lg font-medium text-gray-900 mb-4 flex items-center">
                                         <FaUser className="w-4 h-4 mr-2 text-blue-600" />
-                                        Thông Tin Cá Nhân {userAuth.userId === userDetail.userId && '(Bạn)' }
+                                        Thông Tin Cá Nhân {userAuth.userId === userDetail.userId && '(Bạn)'}
                                     </h4>
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                         <div className="space-y-3">
@@ -181,6 +181,16 @@ const UserDetailModal = ({
                                                     <p className="text-xs sm:text-sm font-medium text-gray-500">Họ và tên</p>
                                                     <p className="text-sm sm:text-base text-gray-900 font-semibold truncate">
                                                         {userDetail.fullName || 'N/A'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-start space-x-3">
+                                                <FaUser className="w-4 h-4 mt-1 text-gray-400 flex-shrink-0" />
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs sm:text-sm font-medium text-gray-500">Tên đăng nhập</p>
+                                                    <p className="text-sm sm:text-base text-gray-900 font-mono break-all">
+                                                        {userDetail.username || 'N/A'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -300,7 +310,7 @@ const UserDetailModal = ({
                                                     </p>
                                                 </div>
                                             </div>
-                                             <div className="flex items-start space-x-3">
+                                            <div className="flex items-start space-x-3">
                                                 <FaUserEdit className="w-4 h-4 mt-1 text-gray-400 flex-shrink-0" />
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-xs sm:text-sm font-medium text-gray-500">Vai trò</p>

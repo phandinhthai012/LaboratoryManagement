@@ -29,6 +29,9 @@ export const API_ENDPOINTS = {
         DELETE_USER: (userId) => `${API_PREFIX}/iam/users/${userId}`,
         VIEW_USER_PROFILE: (UserId) => `${API_PREFIX}/iam/users/${UserId}`,
         CHANGE_PASSWORD: (userId) => `${API_PREFIX}/iam/users/${userId}/password`,
+        // http://localhost:8080/api/v1/iam/users/admin
+        // adminCreateUser
+        ADMIN_CREATE_USER: `${API_PREFIX}/iam/users/admin`,
     },
     ROLES: {
         GET_LIST_ROLES: `${API_PREFIX}/iam/roles`,
@@ -75,7 +78,8 @@ export const API_ENDPOINTS = {
         GET_REPORT_JOB_STATUS: (jobId) => `${API_PREFIX}/report-jobs/${jobId}`,
         // http://localhost:8080/api/v1/test-types
         CREATE_TEST_TYPE: `${API_PREFIX}/test-types`,
-
+        // http://localhost:8080/api/v1/test-types
+        GET_ALL_TEST_TYPES: `${API_PREFIX}/test-types`,
     },
     COMMENTS : {
         CREATE_COMMENT: `${API_PREFIX}/order-comments`,
@@ -121,10 +125,26 @@ export const API_ENDPOINTS = {
         GET_REAGANT_HISTORY_FOR_VENDOR_SUPPLY_BY_ID: (historyCode) => `${API_PREFIX}/warehouse/reagents/history/supply/${historyCode}`,
         //http://localhost:8080/api/v1/warehouse/test-parameters?page=0&size=20&sort=paramName,asc&search=WBC
         GET_ALL_TEST_PARAMETERS: `${API_PREFIX}/warehouse/test-parameters`,
+        //http://localhost:8080/api/v1/warehouse/vendors
+        GET_ALL_VENDORS: `${API_PREFIX}/warehouse/vendors`,
+        // http://localhost:8080/api/v1/warehouse/reagent-types
+        GET_ALL_REAGENT_TYPES: `${API_PREFIX}/warehouse/reagent-types`,
+
     },
     INSTRUMENT : {
         // http://localhost:8080/api/v1/sample-analysis/initiate
         INITIATE_SAMPLE_ANALYSIS: `${API_PREFIX}/sample-analysis/initiate`,
+        // http://localhost:8080/api/v1/instruments/INS-251112114411-30d5ae95-4571/mode
+        CHANGE_INSTRUMENT_MODE: (instrumentCode) => `${API_PREFIX}/instruments/${instrumentCode}/mode`,
+    },
+    MORNITO :{
+        // http://localhost:8080/api/v1/monitoring/event-logs
+        // http://localhost:8080/api/v1/monitoring/event-logs?keyword=Modify
+        // http://localhost:8080/api/v1/monitoring/event-logs?fromDate=2025-11-01T00:00:00&toDate=2025-11-30T23:59:59&operator=INSTRUMENT_HL7_INGEST
+        // http://localhost:8080/api/v1/monitoring/event-logs?page=0&size=5&sort=action,asc
+        // http://localhost:8080/api/v1/monitoring/event-logs?keyword=ThisStringShouldNotExist
+        GET_ALL_EVENT_LOGS: `${API_PREFIX}/monitoring/event-logs`,
+
     }
 }
 

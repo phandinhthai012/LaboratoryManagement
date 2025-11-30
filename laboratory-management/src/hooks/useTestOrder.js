@@ -7,6 +7,7 @@ export const querykeys = {
     testOrderItemsDetail: (testOrderId, testOrderItemId) => ['testOrderItems', testOrderId, testOrderItemId],
     listTestOrders: (params) => ['testOrders', params],
     testCatalogs: () => ['testCatalogs'],
+    testTypes: (params) => ['testTypes', params],
 };
 
 export const useTestOrdersList = (params = {}) => {
@@ -188,7 +189,31 @@ export const useTestOrder = () => {
         }
     });
 
-   
+    const exportExcelTestOrdersMutation = useMutation({
+        mutationFn: async (data) => {
+            const response = await testOrderService.exportExcelTestOrders(data);
+            return response.data;
+        },
+        onSuccess: async(data) => {
+            const jobResponse = await testOrderService.getReportJobStatus(data.jobId);
+            console.log('Report job status:', jobResponse);
+            const jobData = jobResponse.data;
+            if (jobData.status === 'SUCCEEDED' && jobData.resultFile) {
+                // Auto download the Excel file
+                const downloadUrl = jobData.resultFile.objectKey;
+                const fileName = jobData.resultFile.fileName;
+                downloadFile(downloadUrl, fileName);
+                showNotification('Xuất file Excel thành công', 'success');
+            } else if (jobData.status === 'FAILED') {
+                showNotification('Tạo file Excel thất bại', 'error');
+            } else {
+                showNotification('File đang được tạo, vui lòng thử lại sau', 'info');
+            }
+        },
+        onError: (error) => {
+            showNotification(`Xuất file Excel thất bại: ${error.message}`, 'error');
+        }
+    });
 
     return {
         deleteTestOrder: deleteTestOrderMutation.mutateAsync,
@@ -211,6 +236,9 @@ export const useTestOrder = () => {
 
         printTestResults: printTestResultsMutation.mutateAsync,
         isPrintTestResultsLoading: printTestResultsMutation.isPending,
+
+        exportExcelTestOrders: exportExcelTestOrdersMutation.mutateAsync,
+        isExportExcelTestOrdersLoading: exportExcelTestOrdersMutation.isPending,
     };
 }
 
@@ -290,6 +318,22 @@ export const useTestComments = () => {
         isDeletingComment: deleteCommentMutation.isPending,
     };
 
+}
+
+// getAll testType
+export const useTestTypes = (params = {}) => {
+    return useQuery({
+        queryKey: querykeys.testTypes(params),
+        queryFn: async () => {
+            const response = await testOrderService.getAllTestTypes(params);
+            return response.data;
+        },
+        staleTime: 30 * 60 * 1000, // 30 minutes - test types rarely change
+        gcTime: 60 * 60 * 1000, // 1 hour - keep cached very long
+        refetchOnWindowFocus: false, // Don't refetch when window focus
+        refetchOnReconnect: false, // Don't refetch on reconnect for static data
+        refetchOnMount: false, // Don't refetch when component mounts if data exists
+    });
 }
 
 const downloadFile = (url, filename) => {

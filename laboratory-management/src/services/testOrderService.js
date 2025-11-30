@@ -71,6 +71,21 @@ const testOrderService = {
             throw error;
         }
     },
+    getAllTestTypes: async (params) => {
+        try {
+            if (!params) {
+                params = {
+                    size: 100,
+                    page: 0
+                };
+            }
+            const response = await apiClient.get(API_ENDPOINTS.TESTORDER.GET_ALL_TEST_TYPES, { params });
+            return response.data;
+        }
+        catch (error) {
+            throw error;
+        }
+    },
     viewTestOrder: async (testOrderId) => {
         try {
             const response = await apiClient.get(API_ENDPOINTS.TESTORDER.VIEW_DETAIL_TEST_ORDER(testOrderId));
@@ -105,6 +120,28 @@ const testOrderService = {
                 customFileName,
 
             });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+    exportExcelTestOrders: async (data) => {
+        if (!data.customFileName) {
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/[-:.]/g, '').slice(0, 15);
+            data.customFileName = `TestOrders_${timestamp}`;
+        }
+        if(!data.dateRangeType){
+            data.dateRangeType = 'CUSTOM';
+        }
+        try {
+            const response = await apiClient.post(API_ENDPOINTS.TESTORDER.EXPORT_EXCEL, {
+                dateRangeType: data.dateRangeType,
+                startDate: data.startDate,
+                endDate: data.endDate,
+                customFileName: data.customFileName
+            }
+            );
             return response.data;
         } catch (error) {
             throw error;

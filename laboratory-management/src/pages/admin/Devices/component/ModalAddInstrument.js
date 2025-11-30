@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { FaTimes, FaPlus, FaTrash } from 'react-icons/fa';
+import { FaTimes, FaSpinner } from 'react-icons/fa';
 import Select from 'react-select';
-import { useAllConfigurations } from '../../../../hooks/useWareHouse';
+import { useAllConfigurations, useAllVendors, useAllReagentTypes } from '../../../../hooks/useWareHouse';
 
-const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false }) => {
+const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false, isLoadingAddNew }) => {
   const [formData, setFormData] = useState({
     name: '',
     ipAddress: '',
@@ -13,14 +13,29 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
     serialNumber: '',
     vendorId: '',
     configurationSettingIds: [''],
-    compatibleReagentIds: ['']
+    compatibleReagentIds: []
   });
 
   const [errors, setErrors] = useState({});
 
   // Fetch configurations for select (page=0, size=1000)
   const { data: configsData, isLoading: isConfigsLoading } = useAllConfigurations({ page: 0, size: 1000 });
+  const { data: vendorsData, isLoading: isVendorsLoading } = useAllVendors({ page: 0, size: 1000 });
+  const { data: reagentTypesData, isLoading: isReagentTypesLoading } = useAllReagentTypes();
+  const vendors = vendorsData?.data?.values || [];
+  const reagents = reagentTypesData?.data || [];
+  console.log('Reagents for Instrument Modal:', reagents);
+  const vendorOptions = vendors.map(vendor => ({
+    value: vendor.id,
+    label: vendor.name,
+    vendor: vendor // Store full vendor object for display details
+  }));
 
+  const reagentOptions = reagents.map(reagent => ({
+    value: reagent.id,
+    label: reagent.name,
+    reagent: reagent // Store full reagent object for display details
+  }));
   // Normalize various possible response shapes into an array
   const configs = (() => {
     const d = configsData;
@@ -70,28 +85,25 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
     }
   };
 
-  const handleArrayInputChange = (index, value, arrayName) => {
+  const handleVendorChange = (selectedOption) => {
     setFormData(prev => ({
       ...prev,
-      [arrayName]: prev[arrayName].map((item, i) => i === index ? value : item)
+      vendorId: selectedOption ? selectedOption.value : ''
     }));
   };
 
-  const addArrayItem = (arrayName) => {
-    setFormData(prev => ({
-      ...prev,
-      [arrayName]: [...prev[arrayName], '']
-    }));
+  const selectedVendor = vendors.find(v => v.id === formData.vendorId);
+  const selectedVendorOption = vendorOptions.find(opt => opt.value === formData.vendorId);
+
+
+
+  const handleReagentSelectChange = (selected) => {
+    const ids = (selected || []).map(s => s.value);
+    setFormData(prev => ({ ...prev, compatibleReagentIds: ids }));
   };
 
-  const removeArrayItem = (index, arrayName) => {
-    if (formData[arrayName].length > 1) {
-      setFormData(prev => ({
-        ...prev,
-        [arrayName]: prev[arrayName].filter((_, i) => i !== index)
-      }));
-    }
-  };
+  const selectedReagentValues = (formData.compatibleReagentIds || []).filter(Boolean);
+  const selectedReagentOptions = reagentOptions.filter(o => selectedReagentValues.includes(o.value));
 
   const validateForm = () => {
     const newErrors = {};
@@ -135,7 +147,7 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) {
@@ -155,8 +167,8 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
       configurationSettingIds: (formData.configurationSettingIds || []).map(i => i.toString().trim()).filter(id => id),
       compatibleReagentIds: (formData.compatibleReagentIds || []).map(i => i.toString().trim()).filter(id => id)
     };
-
-    onSubmit(cleanedData);
+    console.log('Submitting instrument data:', cleanedData);
+    await onSubmit(cleanedData);
     handleClose();
   };
 
@@ -170,13 +182,42 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
       serialNumber: '',
       vendorId: '',
       configurationSettingIds: [''],
-      compatibleReagentIds: ['']
+      compatibleReagentIds: []
     });
     setErrors({});
     onClose();
   };
 
   if (!isOpen) return null;
+
+  // Show loading overlay when isLoadingAddNew is true
+  if (isLoadingAddNew) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center p-6 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Thêm Thiết Bị Mới</h3>
+            <button
+              onClick={handleClose}
+              className="text-gray-400 hover:text-gray-600 p-2"
+              disabled={isLoadingAddNew}
+            >
+              <FaTimes className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Loading State */}
+          <div className="p-6 flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <FaSpinner className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg font-medium">Đang thêm thiết bị...</p>
+              <p className="text-gray-500 text-sm mt-2">Vui lòng đợi trong giây lát</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -186,6 +227,7 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
           <button
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 p-2"
+            disabled={isSubmitting || isLoadingAddNew}
           >
             <FaTimes className="w-5 h-5" />
           </button>
@@ -203,8 +245,9 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
+                disabled={isSubmitting || isLoadingAddNew}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.name ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  } ${(isSubmitting || isLoadingAddNew) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder="VD: Máy Hóa Sinh"
               />
               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
@@ -220,8 +263,9 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
                 name="ipAddress"
                 value={formData.ipAddress}
                 onChange={handleInputChange}
+                disabled={isSubmitting || isLoadingAddNew}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.ipAddress ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  } ${(isSubmitting || isLoadingAddNew) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder="192.168.1.100"
               />
               {errors.ipAddress && <p className="text-red-500 text-sm mt-1">{errors.ipAddress}</p>}
@@ -237,10 +281,11 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
                 name="port"
                 value={formData.port}
                 onChange={handleInputChange}
+                disabled={isSubmitting || isLoadingAddNew}
                 min="1"
                 max="65535"
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.port ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  } ${(isSubmitting || isLoadingAddNew) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder="5001"
               />
               {errors.port && <p className="text-red-500 text-sm mt-1">{errors.port}</p>}
@@ -256,8 +301,9 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
                 name="model"
                 value={formData.model}
                 onChange={handleInputChange}
+                disabled={isSubmitting || isLoadingAddNew}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.model ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  } ${(isSubmitting || isLoadingAddNew) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder="Cobas 8000"
               />
               {errors.model && <p className="text-red-500 text-sm mt-1">{errors.model}</p>}
@@ -272,8 +318,9 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
                 name="type"
                 value={formData.type}
                 onChange={handleInputChange}
+                disabled={isSubmitting || isLoadingAddNew}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.type ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  } ${(isSubmitting || isLoadingAddNew) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
               >
                 <option value="">Chọn loại thiết bị</option>
                 <option value="Hóa sinh">Hóa sinh</option>
@@ -296,8 +343,9 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
                 name="serialNumber"
                 value={formData.serialNumber}
                 onChange={handleInputChange}
+                disabled={isSubmitting || isLoadingAddNew}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.serialNumber ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  } ${(isSubmitting || isLoadingAddNew) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 placeholder="C8K-SN-TEST-001"
               />
               {errors.serialNumber && <p className="text-red-500 text-sm mt-1">{errors.serialNumber}</p>}
@@ -306,15 +354,26 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
             {/* Vendor ID */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Vendor ID
+                Nhà cung cấp
               </label>
-              <input
-                type="text"
-                name="vendorId"
-                value={formData.vendorId}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="VDR-251104142101-b2c3d4e5-1002"
+              <Select
+                options={vendorOptions}
+                isLoading={isVendorsLoading}
+                isDisabled={isSubmitting || isLoadingAddNew}
+                onChange={handleVendorChange}
+                value={selectedVendorOption}
+                classNamePrefix="react-select"
+                placeholder={isVendorsLoading ? 'Đang tải nhà cung cấp...' : 'Chọn nhà cung cấp'}
+                noOptionsMessage={() => 'Không có nhà cung cấp'}
+                isClearable
+                formatOptionLabel={(option) => (
+                  <div className="flex flex-col">
+                    <div className="font-medium text-gray-900">{option.label}</div>
+                    <div className="text-xs text-gray-500">
+                      ID: {option.vendor.name} | Địa chỉ: {option.vendor.address || 'N/A'}
+                    </div>
+                  </div>
+                )}
               />
             </div>
 
@@ -331,6 +390,7 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
                 isMulti
                 options={configOptions}
                 isLoading={isConfigsLoading}
+                isDisabled={isSubmitting || isLoadingAddNew}
                 onChange={handleConfigSelectChange}
                 value={selectedConfigOptions}
                 classNamePrefix="react-select"
@@ -339,39 +399,47 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
               />
             </div>
 
-            {/* Compatible Reagent IDs */}
+            {/* Compatible Reagent Types */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Compatible Reagent IDs
+                Reagent Types tương thích
               </label>
-              {formData.compatibleReagentIds.map((id, index) => (
-                <div key={index} className="flex items-center gap-2 mb-2">
-                  <input
-                    type="text"
-                    value={id}
-                    onChange={(e) => handleArrayInputChange(index, e.target.value, 'compatibleReagentIds')}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="RTY-ALINITY-002"
-                  />
-                  {formData.compatibleReagentIds.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeArrayItem(index, 'compatibleReagentIds')}
-                      className="text-red-500 hover:text-red-700 p-2"
-                    >
-                      <FaTrash className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => addArrayItem('compatibleReagentIds')}
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm"
-              >
-                <FaPlus className="w-3 h-3" />
-                Thêm Compatible Reagent ID
-              </button>
+              <Select
+                isMulti
+                options={reagentOptions}
+                isLoading={isReagentTypesLoading}
+                isDisabled={isSubmitting || isLoadingAddNew}
+                onChange={handleReagentSelectChange}
+                value={selectedReagentOptions}
+                classNamePrefix="react-select"
+                placeholder={isReagentTypesLoading ? 'Đang tải reagent types...' : 'Chọn reagent types tương thích (có thể chọn nhiều)'}
+                noOptionsMessage={() => 'Không có reagent type'}
+                formatOptionLabel={(option) => (
+                  <div className="flex flex-col">
+                    <div className="font-medium text-gray-900">{option.reagent.name}</div>
+                    <div className="text-xs text-gray-500">
+                      ID: {option.reagent.id}
+                    </div>
+                  </div>
+                )}
+                styles={{
+                  option: (provided, state) => ({
+                    ...provided,
+                    padding: '8px 12px',
+                    backgroundColor: state.isFocused ? '#f3f4f6' : 'white',
+                    ':active': {
+                      backgroundColor: '#e5e7eb'
+                    }
+                  }),
+                  menu: (provided) => ({
+                    ...provided,
+                    zIndex: 9999
+                  })
+                }}
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                Chọn các loại reagent mà thiết bị này có thể sử dụng
+              </div>
             </div>
           </div>
 
@@ -380,16 +448,18 @@ const ModalAddInstrument = ({ isOpen, onClose, onSubmit, isSubmitting = false })
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              disabled={isSubmitting || isLoadingAddNew}
+              className={`px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 ${(isSubmitting || isLoadingAddNew) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               Hủy
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
+              disabled={isSubmitting || isLoadingAddNew}
+              className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2 ${(isSubmitting || isLoadingAddNew) ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              {isSubmitting ? 'Đang thêm...' : 'Thêm thiết bị'}
+              {(isSubmitting || isLoadingAddNew) && <FaSpinner className="w-4 h-4 animate-spin" />}
+              {(isSubmitting || isLoadingAddNew) ? 'Đang thêm...' : 'Thêm thiết bị'}
             </button>
           </div>
         </form>

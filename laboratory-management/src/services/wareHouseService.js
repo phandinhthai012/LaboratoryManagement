@@ -108,6 +108,7 @@ const warehouseService = {
     //modify configuration
     modifyConfiguration: async (configId, configData) => {
         try {
+            console.log('Modifying configuration:', configId, configData);
             const response = await apiClient.put(API_ENDPOINTS.WAREHOUSE.MODIFY_CONFIGURATION(configId), configData);
             return response.data;
         } catch (error) {
@@ -131,9 +132,13 @@ const warehouseService = {
             throw error;
         }
     },
-    getAllReagantHistory: async () => {
+    getAllReagantHistory: async (params) => {
         try {
-            const response = await apiClient.get(API_ENDPOINTS.WAREHOUSE.GET_ALL_REAGANT_HISTORY_FOR_VENDOR_SUPPLY);
+            if(!params) params = {
+                page: 0,
+                size: 20,
+            };
+            const response = await apiClient.get(API_ENDPOINTS.WAREHOUSE.GET_ALL_REAGANT_HISTORY_FOR_VENDOR_SUPPLY, { params });
             return response.data;
         } catch (error) {
             throw error;
@@ -156,6 +161,27 @@ const warehouseService = {
                 sort: 'paramName,asc'
             };
             const response = await apiClient.get(API_ENDPOINTS.WAREHOUSE.GET_ALL_TEST_PARAMETERS, { params });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+    getAllVendors: async (params) => {
+        try {
+            if(!params) params = {
+                page: 0,
+                size:50,
+            };
+
+            const response = await apiClient.get(API_ENDPOINTS.WAREHOUSE.GET_ALL_VENDORS, { params });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+    getAllReagentTypes: async () => {
+        try {
+            const response = await apiClient.get(API_ENDPOINTS.WAREHOUSE.GET_ALL_REAGENT_TYPES);
             return response.data;
         } catch (error) {
             throw error;

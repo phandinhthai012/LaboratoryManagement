@@ -1,58 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
+import { formatPhoneNumber } from '../../../../utils/phoneFormatter';
 import Select from 'react-select';
-import { fallbackProvinces } from '../../../../store/mockData';
-const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departments = [] }) => {
+const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], isLoading = false }) => {
     const [formData, setFormData] = useState({
-        username: '',
         email: '',
         phone: '',
         fullName: '',
+        userName: '',
         identifyNumber: '',
         gender: '',
         age: '',
         address: '',
         dateOfBirth: '',
-        password: '',
-        confirmPassword: '',
-        roleCode: '',
-        status: 'active'
+        roleCode: ''
     });
     const [errors, setErrors] = useState({});
     const [provinceOptions, setProvinceOptions] = useState([]);
     useEffect(() => {
-        // Debug: log selectedUser when modal opens (remove this in production)
-        console.log('[UserModal] selectedUser on open:', selectedUser);
         if (selectedUser) {
             setFormData({
-                username: selectedUser.username || selectedUser.userName || '',
                 email: selectedUser.email || '',
                 phone: selectedUser.phone || '',
                 fullName: selectedUser.fullName || '',
+                username: selectedUser.username || '',
                 identifyNumber: selectedUser.identifyNumber || '',
                 gender: selectedUser.gender || '',
                 age: selectedUser.age ?? '',
                 address: selectedUser.address || selectedUser.province || '',
                 dateOfBirth: selectedUser.dateOfBirth || '',
-                password: '',
-                confirmPassword: '',
-                roleCode: selectedUser.roleCode || '',
-                status: selectedUser.status || 'active'
+                roleCode: selectedUser.roleCode || ''
             });
         } else {
             setFormData({
-                username: '',
                 email: '',
                 phone: '',
                 fullName: '',
+                username: '',
                 identifyNumber: '',
                 gender: '',
                 age: '',
                 address: '',
                 dateOfBirth: '',
-                password: '',
-                confirmPassword: '',
-                roleCode: '',
-                status: 'active'
+                roleCode: ''
             });
         }
         setErrors({});
@@ -73,8 +62,6 @@ const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departme
                 setProvinceOptions(options);
             } catch (error) {
                 console.error('Failed to fetch provinces:', error);
-                // Use fallback data
-                // setProvinceOptions(fallbackProvinces);
             }
         };
 
@@ -86,8 +73,7 @@ const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departme
             address: (prev.address && prev.address.toString().trim()) ? prev.address : (selectedOption ? selectedOption.value : '')
         }));
     };
-    const editing = !!selectedUser;
-    const editingHasUsername = editing && (!!selectedUser?.username || !!selectedUser?.userName);
+
     if (!open) return null;
 
     // Calculate age from date of birth
@@ -127,36 +113,78 @@ const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departme
         });
     };
 
+    // Handle phone number change (no formatting during input)
+    const handlePhoneChange = (e) => {
+        setFormData({
+            ...formData,
+            phone: e.target.value
+        });
+    };
+
     const validate = () => {
         const e = {};
-        // Determine username for validation: prefer trimmed formData.username, otherwise selectedUser fields
-        const rawUsername = (formData.username || '').toString();
-        const trimmedFormUsername = rawUsername.trim();
-        const usernameValue = (!editing)
-            ? trimmedFormUsername
-            : (trimmedFormUsername || (editingHasUsername ? (selectedUser?.username || selectedUser?.userName) : ''));
-
-        // Only validate username when creating or when editing user that already has a username
-        if (!editing || editingHasUsername) {
-            if (!usernameValue) e.username = 'Tên đăng nhập là bắt buộc';
+        
+        // Validate required fields according to backend
+        if (!formData.email.toString().trim()) {
+            e.email = 'Email là bắt buộc';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            e.email = 'Email không hợp lệ';
         }
-
-        // Validate other required fields when creating
-        // userService.createUser requires: username, email, phone, fullName, gender, age, address, dateOfBirth, password, identifyNumber
-        if (!formData.fullName.toString().trim()) e.fullName = 'Họ và tên là bắt buộc';
-        if (!formData.email.toString().trim()) e.email = 'Email là bắt buộc';
-        if (!editing) {
-            if (!formData.phone.toString().trim()) e.phone = 'Số điện thoại là bắt buộc';
-            if (!formData.gender) e.gender = 'Giới tính là bắt buộc';
-            if (!formData.age && formData.age !== 0) e.age = 'Tuổi là bắt buộc';
-            if (!formData.address.toString().trim()) e.address = 'Địa chỉ là bắt buộc';
-            if (!formData.dateOfBirth) e.dateOfBirth = 'Ngày sinh là bắt buộc';
-            if (!formData.identifyNumber.toString().trim()) e.identifyNumber = 'CCCD/CMND là bắt buộc';
-            if (!formData.password) e.password = 'Mật khẩu là bắt buộc';
+        
+        if (!formData.phone.toString().trim()) {
+            e.phone = 'Số điện thoại là bắt buộc';
         } else {
-            // when editing, password is optional; only validate confirm if password provided
-            if (formData.password && formData.password !== formData.confirmPassword) e.confirmPassword = 'Mật khẩu xác nhận không khớp';
+            const phone = formData.phone.toString().trim();
+            // Accept both formats: 0xxxxxxxxx or +84xxxxxxxxx
+            if (!/^(0\d{9,10}|\+84\d{9,10})$/.test(phone)) {
+                e.phone = 'Số điện thoại phải có định dạng 0xxxxxxxxx hoặc +84xxxxxxxxx';
+            }
         }
+        
+        if (!formData.fullName.toString().trim()) {
+            e.fullName = 'Họ và tên là bắt buộc';
+        } else if (formData.fullName.length > 100) {
+            e.fullName = 'Họ và tên không được quá 100 ký tự';
+        }
+        
+        // Only validate identifyNumber for new users (not in edit mode)
+        if (!selectedUser) {
+            if (!formData.identifyNumber.toString().trim()) {
+                e.identifyNumber = 'CCCD/CMND là bắt buộc';
+            } else if (!/^\d{8,20}$/.test(formData.identifyNumber)) {
+                e.identifyNumber = 'CCCD/CMND phải là 8-20 chữ số';
+            }
+        }
+        
+        if (!formData.gender) {
+            e.gender = 'Giới tính là bắt buộc';
+        } else if (!['MALE', 'FEMALE'].includes(formData.gender)) {
+            e.gender = 'Giới tính phải là MALE hoặc FEMALE';
+        }
+        
+        if (!formData.age && formData.age !== 0) {
+            e.age = 'Tuổi là bắt buộc';
+        } else if (formData.age < 0 || formData.age > 150) {
+            e.age = 'Tuổi phải từ 0 đến 150';
+        }
+        
+        if (!formData.address.toString().trim()) {
+            e.address = 'Địa chỉ là bắt buộc';
+        }
+        
+        if (!formData.dateOfBirth) {
+            e.dateOfBirth = 'Ngày sinh là bắt buộc';
+        }
+        
+        // Only validate roleCode for new users (not in edit mode)
+        if (!selectedUser) {
+            if (!formData.roleCode) {
+                e.roleCode = 'Vai trò là bắt buộc';
+            } else if (!formData.roleCode.startsWith('ROLE_')) {
+                e.roleCode = 'Mã vai trò phải bắt đầu bằng ROLE_';
+            }
+        }
+        
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -165,36 +193,22 @@ const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departme
         ev.preventDefault();
         if (!validate()) return;
 
-        // ensure username preserved for edit: use trimmed formData.username if present, otherwise fallback to selectedUser
-        const rawUsername = (formData.username || '').toString();
-        const trimmedFormUsername = rawUsername.trim();
-        let usernameToSend;
-        if (!editing) {
-            usernameToSend = trimmedFormUsername || '';
-        } else if (editingHasUsername) {
-            usernameToSend = trimmedFormUsername || selectedUser?.username || selectedUser?.userName || '';
-        } else {
-            // editing and the user has no username property: do not send username at all
-            usernameToSend = undefined;
-        }
-
         const payload = {
-            // only include username when defined (create OR editing with existing username)
-            ...(typeof usernameToSend !== 'undefined' ? { username: usernameToSend } : {}),
-            email: formData.email,
-            phone: formData.phone,
-            fullName: formData.fullName,
-            identifyNumber: formData.identifyNumber,
+            email: formData.email.trim(),
+            phone: formatPhoneNumber(formData.phone.trim()), // Format phone only on submit
+            fullName: formData.fullName.trim(),
             gender: formData.gender,
-            age: formData.age ? Number(formData.age) : undefined,
-            address: formData.address,
-            dateOfBirth: formatDateToMMDDYYYY(formData.dateOfBirth),
-            password: formData.password || undefined,
-            roleCode: formData.roleCode,
-            status: formData.status
+            age: Number(formData.age),
+            address: formData.address.trim(),
+            dateOfBirth: formatDateToMMDDYYYY(formData.dateOfBirth)
         };
-        // Remove undefined keys
-        Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+        
+        // Only include these fields for new users
+        if (!selectedUser) {
+            payload.identifyNumber = formData.identifyNumber.trim();
+            payload.roleCode = formData.roleCode;
+        }
+        console.log('[UserModal] Submitting payload:', payload, 'isEditMode:', !!selectedUser);
         onSubmit && onSubmit(payload, !!selectedUser);
     };
 
@@ -207,27 +221,6 @@ const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departme
                     </h3>
 
                     <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
-                        {/* Username: show only when creating; when editing keep an invisible hidden input */}
-                        {selectedUser ? (
-                            <input
-                                type="hidden"
-                                name="username"
-                                value={formData.username || selectedUser?.username || selectedUser?.userName || ''}
-                            />
-                        ) : (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tên đăng nhập *</label>
-                                <input
-                                    type="text"
-                                    value={formData.username}
-                                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Tên đăng nhập"
-                                />
-                                {errors.username && <p className="text-sm text-red-600 mt-1">{errors.username}</p>}
-                            </div>
-                        )}
-
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Họ và Tên *</label>
@@ -240,6 +233,21 @@ const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departme
                             />
                             {errors.fullName && <p className="text-sm text-red-600 mt-1">{errors.fullName}</p>}
                         </div>
+
+                        {/* {selectedUser && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Tên đăng nhập <span className="text-gray-500 text-xs">(Chỉ hiển thị)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.username}
+                                    readOnly
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed text-gray-600"
+                                    placeholder="Không có tên đăng nhập"
+                                />
+                            </div>
+                        )} */}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
@@ -254,83 +262,108 @@ const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departme
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Số điện thoại * 
+                                <span className="text-xs text-gray-500">(Sẽ tự động format khi lưu)</span>
+                            </label>
                             <input
                                 type="tel"
                                 value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                onChange={handlePhoneChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="+84901234567"
+                                placeholder="0901234567 hoặc +84901234567"
+                                required
                             />
+                            {errors.phone && <p className="text-sm text-red-600 mt-1">{errors.phone}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">CCCD / CMND</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                CCCD / CMND * {selectedUser && <span className="text-gray-500 text-xs">(Không thể thay đổi)</span>}
+                            </label>
                             <input
                                 type="text"
                                 value={formData.identifyNumber}
                                 onChange={(e) => setFormData({ ...formData, identifyNumber: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="012345678901"
+                                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                    selectedUser ? 'bg-gray-100 cursor-not-allowed' : ''
+                                }`}
+                                placeholder="022345878441"
+                                disabled={!!selectedUser}
+                                required
                             />
+                            {errors.identifyNumber && <p className="text-sm text-red-600 mt-1">{errors.identifyNumber}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Giới tính *</label>
                             <select
                                 value={formData.gender}
                                 onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                required
                             >
-                                <option value="">Chọn</option>
+                                <option value="">Chọn giới tính</option>
                                 <option value="MALE">Nam</option>
                                 <option value="FEMALE">Nữ</option>
-                                <option value="OTHER">Khác</option>
                             </select>
+                            {errors.gender && <p className="text-sm text-red-600 mt-1">{errors.gender}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tuổi</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Tuổi *</label>
                             <input
                                 type="number"
                                 min="0"
+                                max="150"
                                 value={formData.age}
                                 onChange={(e) => setFormData({ ...formData, age: e.target.value })}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 placeholder="22"
+                                required
                             />
+                            {errors.age && <p className="text-sm text-red-600 mt-1">{errors.age}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ *</label>
                             <Select
                                 options={provinceOptions}
                                 placeholder="Chọn tỉnh/thành phố"
                                 value={provinceOptions.find(option => option.value === formData.address)}
                                 onChange={handleProvinceChange}
                                 className={`w-full ${errors.address ? 'border-red-500' : ''}`}
+                                required
                             />
-                            {errors.province && (
+                            {errors.address && (
                                 <p className="mt-1 text-sm text-red-600">{errors.address}</p>
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh *</label>
                             <input
                                 type="date"
                                 value={formData.dateOfBirth}
                                 onChange={handleDateOfBirthChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                required
                             />
+                            {errors.dateOfBirth && <p className="text-sm text-red-600 mt-1">{errors.dateOfBirth}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Vai trò *</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Vai trò * {selectedUser && <span className="text-gray-500 text-xs">(Không thể thay đổi)</span>}
+                            </label>
                             <select
                                 value={formData.roleCode}
                                 onChange={(e) => setFormData({ ...formData, roleCode: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                    selectedUser ? 'bg-gray-100 cursor-not-allowed' : ''
+                                }`}
+                                disabled={!!selectedUser}
+                                required
                             >
                                 <option value="">Chọn vai trò</option>
                                 {roles.map((r, i) => (
@@ -339,42 +372,31 @@ const UserModal = ({ open, onClose, onSubmit, selectedUser, roles = [], departme
                                     </option>
                                 ))}
                             </select>
+                            {errors.roleCode && <p className="text-sm text-red-600 mt-1">{errors.roleCode}</p>}
                         </div>
 
-                        {/* Không hiển thị password khi đang chỉnh sửa */}
-                        {!selectedUser && (
-                            <>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu *</label>
-                                    <input
-                                        type="password"
-                                        value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="P@ssw0rd123"
-                                    />
-                                    {errors.password && <p className="text-sm text-red-600 mt-1">{errors.password}</p>}
-                                </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu</label>
-                                    <input
-                                        type="password"
-                                        value={formData.confirmPassword}
-                                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="P@ssw0rd123"
-                                    />
-                                    {errors.confirmPassword && <p className="text-sm text-red-600 mt-1">{errors.confirmPassword}</p>}
-                                </div>
-                            </>
-                        )}
 
                         <div className="md:col-span-2 flex justify-end gap-3 mt-2">
-                            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            <button 
+                                type="button" 
+                                onClick={onClose} 
+                                disabled={isLoading}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
                                 Hủy
                             </button>
-                            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                            <button 
+                                type="submit" 
+                                disabled={isLoading}
+                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                            >
+                                {isLoading && (
+                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                )}
                                 {selectedUser ? 'Cập Nhật' : 'Thêm'} Người Dùng
                             </button>
                         </div>

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState, useCallback } from 'react';
 import { FaEdit, FaTrash, FaEye } from 'react-icons/fa';
 import { useWareHouse } from '../../../../hooks/useWareHouse';
 import ConfirmDialog from '../../../../components/ConfirmDialog';
@@ -16,69 +16,84 @@ const SystemConfigurationsTab = ({
     isLoading
 }) => {
     const {deleteConfiguration, isDeletingConfiguration} = useWareHouse();
-
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, configId: null });
     const [viewConfigId, setViewConfigId] = useState(null);
     const [editConfigId, setEditConfigId] = useState(null);
 
-    const formatValue = (value, dataType) => {
+    // Optimized formatValue function for new backend structure
+    const formatValue = (value) => {
         if (!value) return 'N/A';
 
-        switch (dataType) {
-            case 'JSON':
-                try {
-                    const jsonString = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
-                    // Hiển thị tối đa 200 ký tự cho JSON
-                    return jsonString.length > 200 ? jsonString.substring(0, 200) + '...' : jsonString;
-                } catch (error) {
-                    return 'Invalid JSON';
-                }
-
-            case 'BOOLEAN':
-                return value === true || value === 'true' ? 'True' : 'False';
-
-            case 'NUMBER':
-                const num = typeof value === 'number' ? value : parseFloat(value);
-                return isNaN(num) ? value.toString() : num.toLocaleString('vi-VN');
-
-            case 'STRING':
-                // Hiển thị tối đa 100 ký tự cho STRING
-                const str = value.toString();
-                return str.length > 100 ? str.substring(0, 100) + '...' : str;
-
-            case 'ARRAY':
-                try {
-                    const array = Array.isArray(value) ? value : JSON.parse(value);
-                    const arrayStr = JSON.stringify(array, null, 2);
-                    return `[${array.length} items] ${arrayStr.length > 150 ? arrayStr.substring(0, 150) + '...' : arrayStr}`;
-                } catch (error) {
-                    return value.toString();
-                }
-
-            default:
-                const defaultStr = value.toString();
-                return defaultStr.length > 100 ? defaultStr.substring(0, 100) + '...' : defaultStr;
+        // Handle objects (settings from backend)
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            try {
+                const jsonString = JSON.stringify(value, null, 2);
+                return jsonString;
+            } catch (error) {
+                return 'Invalid JSON';
+            }
         }
+
+        // Handle arrays
+        if (Array.isArray(value)) {
+            try {
+                const arrayStr = JSON.stringify(value, null, 2);
+                return `[${value.length} items] ${arrayStr.length > 120 ? arrayStr.substring(0, 120) + '...' : arrayStr}`;
+            } catch (error) {
+                return value.toString();
+            }
+        }
+
+        // Handle booleans
+        if (typeof value === 'boolean') {
+            return value ? 'True' : 'False';
+        }
+
+        // Handle numbers
+        if (typeof value === 'number') {
+            return value.toLocaleString('vi-VN');
+        }
+
+        // Handle strings (including potential JSON strings)
+        if (typeof value === 'string') {
+            // Try to parse as JSON first
+            try {
+                const parsed = JSON.parse(value);
+                if (typeof parsed === 'object') {
+                    const jsonString = JSON.stringify(parsed, null, 2);
+                    return jsonString.length > 150 ? jsonString.substring(0, 150) + '...' : jsonString;
+                }
+            } catch (error) {
+                // Not JSON, treat as regular string
+            }
+
+            // Regular string - truncate if too long
+            return value.length > 80 ? value.substring(0, 80) + '...' : value;
+        }
+
+        // Fallback
+        const str = String(value);
+        return str.length > 80 ? str.substring(0, 80) + '...' : str;
     };
-    const handleView = (config) => {
+    const handleView = useCallback((config) => {
         console.log('View config:', config);
         setViewConfigId(config.id);
-    };
+    }, []);
 
-    const handleEdit = (config) => {
+    const handleEdit = useCallback((config) => {
         console.log('Edit config:', config);
         setEditConfigId(config.id);
-    };
+    }, []);
 
-    const openConfirmDelete = (configId) => {
+    const openConfirmDelete = useCallback((configId) => {
         setConfirmDelete({ isOpen: true, configId });
-    };
+    }, []);
 
-    const closeConfirmDelete = () => {
+    const closeConfirmDelete = useCallback(() => {
         setConfirmDelete({ isOpen: false, configId: null });
-    };
+    }, []);
 
-    const handleConfirmDelete = async () => {
+    const handleConfirmDelete = useCallback(async () => {
         if (confirmDelete.configId) {
             try {
                 await deleteConfiguration(confirmDelete.configId);
@@ -87,7 +102,7 @@ const SystemConfigurationsTab = ({
                 console.error('Failed to delete configuration:', error);
             }
         }
-    };
+    }, [confirmDelete.configId, deleteConfiguration]);
 
     return (
         <div className="p-6">
@@ -154,10 +169,13 @@ const SystemConfigurationsTab = ({
                                 <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200" style={{ width: '180px', minWidth: '180px' }}>
                                     Tên cấu hình
                                 </th>
-                                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200" style={{ width: '280px', minWidth: '280px' }}>
-                                    Giá trị
+                                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200" style={{ width: '160px', minWidth: '160px' }}>
+                                    Thiết bị
                                 </th>
-                                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200" style={{ width: '200px', minWidth: '200px' }}>
+                                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200" style={{ width: '220px', minWidth: '220px' }}>
+                                    Cài đặt
+                                </th>
+                                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200" style={{ width: '180px', minWidth: '180px' }}>
                                     Mô tả
                                 </th>
                                 <th className="px-2 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200" style={{ width: '90px', minWidth: '90px' }}>
@@ -181,8 +199,12 @@ const SystemConfigurationsTab = ({
                                             <div className="h-3 bg-gray-200 rounded w-16"></div>
                                         </td>
                                         <td className="px-3 py-3">
+                                            <div className="h-3 bg-gray-200 rounded mb-1"></div>
+                                            <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                                        </td>
+                                        <td className="px-3 py-3">
                                             <div className="bg-gray-50 p-2 rounded border">
-                                                <div className="h-8 bg-gray-200 rounded mb-1"></div>
+                                                <div className="h-6 bg-gray-200 rounded mb-1"></div>
                                                 <div className="h-4 bg-gray-200 rounded w-3/4"></div>
                                             </div>
                                         </td>
@@ -208,7 +230,7 @@ const SystemConfigurationsTab = ({
                                 ))
                             ) : filteredData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-16 text-center">
+                                    <td colSpan={7} className="px-6 py-16 text-center">
                                         <div className="flex flex-col items-center">
                                             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                                                 <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -238,33 +260,75 @@ const SystemConfigurationsTab = ({
                                     >
                                         <td className="px-3 py-3 text-sm">
                                             <div className="font-semibold text-gray-900 mb-1 break-words text-sm">{config.name}</div>
-                                            <div className="text-xs text-gray-500 font-mono bg-gray-100 px-1 py-0.5 rounded">
-                                                id: {config.id}
+                                            <div className="text-xs text-gray-500 font-mono bg-gray-100 px-1 py-0.5 rounded mb-1">
+                                                ID: {config.id}
                                             </div>
+                                            {config.version && (
+                                                <div className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded font-medium">
+                                                    v{config.version}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-3 py-3 text-sm">
-                                            <div className="bg-gray-50 p-2 rounded border">
-                                                <div className="text-xs font-mono break-all text-gray-700 leading-relaxed">
-                                                    {formatValue(config.value, config.dataType)}
+                                            {config.configType === 'SPECIFIC' && (config.instrumentModel || config.instrumentType) ? (
+                                                <div className="space-y-1">
+                                                    {config.instrumentModel && (
+                                                        <div className="text-xs font-semibold text-gray-900 bg-blue-50 px-2 py-1 rounded">
+                                                            {config.instrumentModel}
+                                                        </div>
+                                                    )}
+                                                    {config.instrumentType && (
+                                                        <div className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                                            {config.instrumentType}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
+                                            ) : (
+                                                <span className="text-xs text-gray-400 italic">
+                                                    {config.configType === 'GENERAL' ? 'Cấu hình chung' : 'Chưa xác định'}
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-3 text-sm">
+                                            {config.settings && typeof config.settings === 'object' && Object.keys(config.settings).length > 0 ? (
+                                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200 max-w-sm">
+                                                    <div className="text-xs space-y-2">
+                                                        {Object.entries(config.settings).slice(0, 3).map(([key, value]) => (
+                                                            <div key={key} className="flex justify-between items-center bg-white px-2 py-1 rounded shadow-sm">
+                                                                <span className="font-medium text-blue-600 capitalize">{key.replace(/([A-Z])/g, ' $1').toLowerCase()}:</span>
+                                                                <span className="text-gray-800 font-mono text-xs">
+                                                                    {formatValue(value)}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                        {Object.keys(config.settings).length > 3 && (
+                                                            <div className="text-center">
+                                                                <span className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">
+                                                                    +{Object.keys(config.settings).length - 3} cài đặt khác
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-gray-400 italic bg-gray-50 px-2 py-1 rounded">Chưa có cài đặt</span>
+                                            )}
                                         </td>
                                         <td className="px-3 py-3 text-sm text-gray-700">
                                             <div className="break-words leading-relaxed text-xs">
-                                                {config.description}
+                                                {config.description || (
+                                                    <span className="text-gray-400 italic">Chưa có mô tả</span>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-2 py-3 text-center">
-                                            <span className={`inline-flex items-center px-1 py-1 text-xs font-medium rounded ${config.dataType === 'JSON' ? 'bg-blue-100 text-blue-800' :
-                                                    config.dataType === 'BOOLEAN' ? 'bg-purple-100 text-purple-800' :
-                                                        config.dataType === "INTEGER" ? 'bg-green-100 text-green-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                {config.dataType}
+                                            <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
+                                                config.configType === 'SPECIFIC' 
+                                                    ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                                                    : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                            }`}>
+                                                {config.configType ? config.configType : 'chưa xác định'}
                                             </span>
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                Ngày cập nhật {new Date(config.updatedAt).toLocaleDateString('vi-VN')}
-                                            </div>
                                         </td>
                                         <td className="px-2 py-3 text-center">
                                             <span className={`inline-flex items-center px-1 py-1 text-xs font-medium rounded ${config.isDeleted
@@ -407,4 +471,4 @@ const SystemConfigurationsTab = ({
     );
 };
 
-export default SystemConfigurationsTab;
+export default React.memo(SystemConfigurationsTab);

@@ -35,7 +35,7 @@ const userService = {
     createUser: async (userData) => {
         try {
             const { username, email, phone, fullName, gender, age, address, dateOfBirth, password, roleCode, identifyNumber } = userData;
-            if(!username || !email || !phone || !fullName || !gender || !age || !address || !dateOfBirth || !password || !identifyNumber) {
+            if (!username || !email || !phone || !fullName || !gender || !age || !address || !dateOfBirth || !password || !identifyNumber) {
                 throw new Error("Missing required user data");
             }
             const response = await apiClient.post(API_ENDPOINTS.USERS.CREATE_USER, {
@@ -111,7 +111,7 @@ const userService = {
             return response.data;
         } catch (error) {
             throw error;
-        }           
+        }
     },
     resendEmail: async (Data) => {
         try {
@@ -137,6 +137,29 @@ const userService = {
             throw error;
         }
     },
+    adminCreateUser: async (userData) => {
+        try {
+            const { email, phone, fullName, identifyNumber, gender, age, address, dateOfBirth, roleCode } = userData;
+            if (!email || !phone || !fullName || !identifyNumber || !gender || !age || !address || !dateOfBirth || !roleCode) {
+                throw new Error("Missing required user data");
+            }
+            const response = await apiClient.post(API_ENDPOINTS.USERS.ADMIN_CREATE_USER, {
+                email,
+                phone,
+                fullName,
+                identifyNumber,
+                gender,
+                age,
+                address,
+                dateOfBirth,
+                roleCode,
+            });
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
 };
 
 export default userService;

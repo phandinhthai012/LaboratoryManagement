@@ -24,7 +24,7 @@ const TestOrderDetail = () => {
     const { id } = useParams();
     console.log('Test Order ID from params:', id);
     const navigate = useNavigate();
-    const { data: testOrder, isLoading, isError } = useTestOrderById(id);
+    const { data: testOrder, isLoading, isError, refetch } = useTestOrderById(id);
     console.log('Fetched test order:', testOrder, id);
     const {
         // updateTestOrder,
@@ -135,8 +135,15 @@ const TestOrderDetail = () => {
     }, []);
 
     const sendOrderToGetResult = useCallback(async () => {
-       
-    }, []);
+        try {
+            showNotification('Đang cập nhật kết quả...', 'info');
+            await refetch();
+            showNotification('Cập nhật kết quả thành công!', 'success');
+        } catch (error) {
+            showNotification('Không thể cập nhật kết quả', 'error');
+            console.error('Error refetching test order:', error);
+        }
+    }, [refetch, showNotification]);
 
     const getStatusText = (status) => {
         switch (status) {

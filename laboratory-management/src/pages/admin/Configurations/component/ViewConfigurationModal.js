@@ -12,7 +12,6 @@ const ViewConfigurationModal = ({ isOpen, onClose, configID }) => {
     if (!isOpen || !configID) return null;
 
     const config = configRes?.data || {};
-    console.log('Configuration Details:', config);
     
     // Safe date formatter to handle object returns
     const formatDateSafe = (dateStr) => {
@@ -32,26 +31,37 @@ const ViewConfigurationModal = ({ isOpen, onClose, configID }) => {
         }
     };
     
-    const formatValue = (value, dataType) => {
+    const formatValue = (value) => {
         if (value === null || value === undefined) return 'N/A';
 
-        try {
-            switch (dataType) {
-                case 'JSON':
-                    const jsonValue = typeof value === 'string' ? JSON.parse(value) : value;
-                    return JSON.stringify(jsonValue, null, 2);
-                case 'BOOLEAN':
-                    return value === true || value === 'true' ? 'True' : 'False';
-                case 'INTEGER':
-                    return Number(value).toLocaleString('vi-VN');
-                case 'STRING':
-                    return value.toString();
-                default:
-                    return value.toString();
+        // Handle objects (like settings)
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            try {
+                return JSON.stringify(value, null, 2);
+            } catch (error) {
+                return 'Invalid Object';
             }
-        } catch (error) {
-            return value.toString();
         }
+
+        // Handle arrays
+        if (Array.isArray(value)) {
+            try {
+                return JSON.stringify(value, null, 2);
+            } catch (error) {
+                return value.toString();
+            }
+        }
+
+        // Handle other types
+        if (typeof value === 'boolean') {
+            return value ? 'Có' : 'Không';
+        }
+
+        if (typeof value === 'number') {
+            return value.toLocaleString('vi-VN');
+        }
+
+        return value.toString();
     };
 
     const copyToClipboard = (text) => {
@@ -62,15 +72,7 @@ const ViewConfigurationModal = ({ isOpen, onClose, configID }) => {
         });
     };
 
-    const getDataTypeColor = (dataType) => {
-        switch (dataType) {
-            case 'JSON': return 'bg-blue-100 text-blue-800';
-            case 'BOOLEAN': return 'bg-purple-100 text-purple-800';
-            case 'INTEGER': return 'bg-green-100 text-green-800';
-            case 'STRING': return 'bg-gray-100 text-gray-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
-    };
+
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -112,13 +114,50 @@ const ViewConfigurationModal = ({ isOpen, onClose, configID }) => {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-500 mb-1">Kiểu dữ liệu</label>
-                                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${getDataTypeColor(config.dataType)}`}>
-                                        {config.dataType}
+                                    <label className="block text-xs font-medium text-gray-500 mb-1">Loại cấu hình</label>
+                                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                                        config.configType === 'SPECIFIC' 
+                                            ? 'bg-purple-100 text-purple-800 border border-purple-200' 
+                                            : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                    }`}>
+                                        {config.configType === 'SPECIFIC' ? '🎯 Cụ thể' : '🌐 Chung'}
                                     </span>
                                 </div>
+                                {config.version && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-1">Phiên bản</label>
+                                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
+                                            v{config.version}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
+
+                        {/* Instrument Info - only for SPECIFIC configs */}
+                        {config.configType === 'SPECIFIC' && (config.instrumentModel || config.instrumentType) && (
+                            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                                <h4 className="text-sm font-semibold text-purple-700 mb-3">Thông tin thiết bị</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {config.instrumentModel && (
+                                        <div>
+                                            <label className="block text-xs font-medium text-purple-600 mb-1">Mô hình thiết bị</label>
+                                            <div className="bg-white border border-purple-200 rounded-lg p-2">
+                                                <p className="text-purple-900 font-medium">{config.instrumentModel}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {config.instrumentType && (
+                                        <div>
+                                            <label className="block text-xs font-medium text-purple-600 mb-1">Loại thiết bị</label>
+                                            <div className="bg-white border border-purple-200 rounded-lg p-2">
+                                                <p className="text-purple-900">{config.instrumentType}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Name & Description */}
                         <div>
@@ -131,31 +170,70 @@ const ViewConfigurationModal = ({ isOpen, onClose, configID }) => {
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả</label>
                             <div className="bg-white border rounded-lg p-3">
-                                <p className="text-gray-700 leading-relaxed">{config.description}</p>
+                                <p className="text-gray-700 leading-relaxed">
+                                    {config.description || (
+                                        <span className="text-gray-400 italic">Chưa có mô tả</span>
+                                    )}
+                                </p>
                             </div>
                         </div>
 
-                        {/* Value */}
+                        {/* Settings */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-semibold text-gray-700">Giá trị</label>
-                                <button
-                                    onClick={() => copyToClipboard(formatValue(config.value, config.dataType))}
-                                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
-                                >
-                                    <FaCopy className="mr-1" size={10} />
-                                    Sao chép giá trị
-                                </button>
+                                <label className="block text-sm font-semibold text-gray-700">Cài đặt cấu hình</label>
+                                {config.settings && Object.keys(config.settings).length > 0 && (
+                                    <button
+                                        onClick={() => copyToClipboard(JSON.stringify(config.settings, null, 2))}
+                                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                                    >
+                                        <FaCopy className="mr-1" size={10} />
+                                        Sao chép cài đặt
+                                    </button>
+                                )}
                             </div>
-                            <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-auto max-h-48">
-                                <pre className="whitespace-pre-wrap break-words">
-                                    {formatValue(config.value, config.dataType)}
-                                </pre>
-                            </div>
-                            {config.dataType === 'JSON' && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                    💡 Giá trị được format JSON để dễ đọc
-                                </p>
+                            
+                            {config.settings && Object.keys(config.settings).length > 0 ? (
+                                <div className="space-y-3">
+                                    {/* Settings as cards */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {Object.entries(config.settings).map(([key, value]) => (
+                                            <div key={key} className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <label className="text-xs font-medium text-blue-700 capitalize">
+                                                            {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                                                        </label>
+                                                        <p className="text-sm font-semibold text-blue-900 mt-1">
+                                                            {formatValue(value)}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => copyToClipboard(String(value))}
+                                                        className="text-blue-500 hover:text-blue-700 p-1"
+                                                        title="Sao chép giá trị"
+                                                    >
+                                                        <FaCopy size={10} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    {/* Raw JSON view */}
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-500 mb-2">Dạng JSON:</label>
+                                        <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-auto max-h-48">
+                                            <pre className="whitespace-pre-wrap break-words">
+                                                {JSON.stringify(config.settings, null, 2)}
+                                            </pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                                    <p className="text-gray-500 italic">Chưa có cài đặt nào được cấu hình</p>
+                                </div>
                             )}
                         </div>
 

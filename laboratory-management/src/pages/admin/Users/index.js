@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaSearch, FaPlus, FaEye, FaEdit, FaTrash, FaUser, FaUsers } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaEye, FaEdit, FaTrash, FaUser, FaUsers,FaTimes } from 'react-icons/fa';
 import Avatar from '@mui/material/Avatar';
 import Loading from '../../../components/Loading';
 import MainLayout from '../../../layouts/MainLayout';
@@ -8,18 +8,18 @@ import ErrorFetchData from '../../../components/ErrorFetchData';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import { useAuth } from '../../../contexts/AuthContext';
 import { formatDate } from '../../../utils/helpers';
-import { useUsers,useDeleteUser } from '../../../hooks/useUser';
+import { useUsers, useDeleteUser } from '../../../hooks/useUser';
 import { useRoles } from '../../../hooks/useRole';
 import { roleIconMap } from './components/RoleBadge';
 import UserModal from './components/UserModal';
 import UserDetailModal from './components/UserDetailModal';
 import userService from '../../../services/userService';
-import { encryptPassword } from '../../../utils/helpers';
 import { useNotifier } from '../../../contexts/NotifierContext';
 import { useQueryClient } from '@tanstack/react-query';
-
+import { useAdminCreateUser } from '../../../hooks/useUser';
+import RoleDetail from './components/RoleDetail';
 const Users = () => {
-  const { user:userAuth } = useAuth();
+  const { user: userAuth } = useAuth();
   const today = formatDate(new Date());
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,36 +35,27 @@ const Users = () => {
     gender: '',
     minAge: null,
     maxAge: null,
-    sortBy: '',
-    sortDir: 'asc',
+    sortBy: 'createdAt',
+    sortDir: 'desc',
     page: 0,
     size: 10
   });
   const [showUserModal, setShowUserModal] = useState(false);
-  // departments placeholder (replace with real data or API)
-  const departments = ['Quản trị', 'Huyết học', 'Hóa sinh', 'Vi sinh', 'Miễn dịch', 'Tiếp nhận', 'Kỹ thuật'];
 
   const { showNotification } = useNotifier();
   const queryClient = useQueryClient();
+  const { mutateAsync: adminCreateUser, isPending: isLoadingCreateUser } = useAdminCreateUser();
 
   const handleCreateUser = async (data) => {
     try {
-      // encrypt password before sending
-      const payload = { ...data };
-      if (payload.password) {
-        payload.password = await encryptPassword(payload.password);
-      }
-
-      const res = await userService.createUser(payload);
-      console.log('Create user response', res);
-      showNotification('Tạo người dùng thành công', 'success');
-      // Refresh users list
-      queryClient.invalidateQueries(['users']);
+      console.log('Create user data', data);
+      // Use adminCreateUser hook instead of direct service call
+      await adminCreateUser(data);
       setShowUserModal(false);
+      setSelectedUser(null);
     } catch (error) {
       console.error('Create user error', error);
-      const msg = error?.response?.data?.message || error.message || 'Tạo người dùng thất bại';
-      showNotification(msg, 'error');
+      // Error handling is done in the hook
     }
   };
 
@@ -76,15 +67,19 @@ const Users = () => {
       }
 
       const userId = selectedUser.userId || selectedUser.id;
-      const payload = { ...data };
-      // if password provided, encrypt it
-      if (payload.password) {
-        payload.password = await encryptPassword(payload.password);
-      } else {
-        // do not send empty password field
-        delete payload.password;
-      }
 
+      // Only send allowed fields for update
+      const payload = {
+        fullName: data.fullName,
+        dateOfBirth: data.dateOfBirth,
+        age: data.age,
+        gender: data.gender,
+        address: data.address,
+        email: data.email,
+        phone: data.phone
+      };
+
+      console.log('Update user payload:', payload);
       const res = await userService.updateUser(userId, payload);
       console.log('Update user response', res);
       showNotification('Cập nhật người dùng thành công', 'success');
@@ -115,8 +110,13 @@ const Users = () => {
     }));
   }, [debouncedSearchTerm]);
 
+  const [showRoleDetail, setShowRoleDetail] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(null);
+
   const { data: responseUsers, isLoading, isError } = useUsers(paginationParams)
+  console.log('Fetched users response:', responseUsers);
   const { data: responseRoles, isError: isErrorRoles } = useRoles();
+  console.log('Fetched roles response:', responseRoles);
   const deleteUser = useDeleteUser();
   const listRoles = responseRoles?.content || [];
 
@@ -159,13 +159,13 @@ const Users = () => {
     setShowConfirmDialog(true);
   }
   const closeDeleteConfirm = () => {
-    if(isDeleting) return; // prevent closing while deleting
+    if (isDeleting) return; // prevent closing while deleting
     setShowConfirmDialog(false);
     setUserToDelete(null);
   };
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
-    if(userToDelete.userId === userAuth.userId) {
+    if (userToDelete.userId === userAuth.userId) {
       showNotification('Bạn không thể xóa chính mình', 'error');
       closeDeleteConfirm();
       return;
@@ -180,7 +180,7 @@ const Users = () => {
       closeDeleteConfirm();
     }
   }
-  
+
 
   const handleViewDetails = (userId) => {
     setSelectedUserId(userId);
@@ -193,8 +193,18 @@ const Users = () => {
 
   const handleDeleteFromDetail = (user) => {
     setUserToDelete(user);
-    setShowUserDetailModal(false); 
-    setShowConfirmDialog(true); 
+    setShowUserDetailModal(false);
+    setShowConfirmDialog(true);
+  };
+
+  const handleRoleClick = (role) => {
+    setSelectedRole(role);
+    setShowRoleDetail(true);
+  };
+
+  const closeRoleDetail = () => {
+    setShowRoleDetail(false);
+    setSelectedRole(null);
   };
 
   // Calculate statistics
@@ -254,7 +264,10 @@ const Users = () => {
               const roleConfig = roleIconMap[role.roleCode];
               const IconComponent = roleConfig ? roleConfig.icon : FaUser;
               return (
-                <div key={index} className="text-center p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                <div
+                  onClick={() => handleRoleClick(role)}
+                  key={index}
+                  className="text-center p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
                   <div className="flex justify-center mb-3">
                     <div className={`p-3 rounded-full`}>
                       <IconComponent className={`w-6 h-6 ${roleConfig ? roleConfig.className : 'text-gray-600'}`} />
@@ -444,14 +457,14 @@ const Users = () => {
                           </button>
                           <button
                             onClick={() => {
-                             handleViewDetails(user.userId);
+                              handleViewDetails(user.userId);
                             }}
                             className="text-green-600 hover:text-green-900 p-1"
                             title="Xem chi tiết"
                           >
                             <FaEye className="w-4 h-4" />
                           </button>
-                          {userAuth.roleCode === 'ROLE_ADMIN' && user.roleCode !== 'ROLE_ADMIN' &&  userAuth.userId !== user.userId && (
+                          {userAuth.roleCode === 'ROLE_ADMIN' && user.roleCode !== 'ROLE_ADMIN' && userAuth.userId !== user.userId && (
                             <button
                               onClick={() => {
                                 openDeleteConfirm(user);
@@ -543,7 +556,7 @@ const Users = () => {
           onSubmit={(data, isEdit) => isEdit ? handleUpdateUser(data) : handleCreateUser(data)}
           selectedUser={selectedUser}
           roles={listRoles}
-          departments={departments}
+          isLoading={isLoadingCreateUser}
         />
         <ConfirmDialog
           isOpen={showConfirmDialog}
@@ -556,13 +569,46 @@ const Users = () => {
           onConfirm={handleDeleteUser}
           isLoading={isDeleting}
         />
-        
+
         <UserDetailModal
           isOpen={showUserDetailModal}
           onClose={closeViewDetails}
           userId={selectedUserId}
           onDelete={handleDeleteFromDetail}
         />
+         <div className={`fixed inset-y-0 right-0 z-50 w-full max-w-md transform transition-transform duration-300 ease-in-out ${
+          showRoleDetail ? 'translate-x-0' : 'translate-x-full'
+        }`}>
+          <div className="flex h-full flex-col bg-white shadow-xl">
+            {/* Panel Header */}
+            <div className="flex items-center justify-between px-4 py-6 sm:px-6 bg-gray-50 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Chi Tiết Vai Trò</h3>
+              <button
+                type="button"
+                className="rounded-md bg-white p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition-colors"
+                onClick={closeRoleDetail}
+              >
+                <span className="sr-only">Đóng panel</span>
+                <FaTimes className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Panel Content */}
+            <div className="relative flex-1 px-4 py-6 sm:px-6 overflow-y-auto">
+              {selectedRole && (
+                <RoleDetail role={selectedRole} />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Backdrop */}
+        {showRoleDetail && (
+          <div 
+            className="fixed inset-0 z-40 bg-black bg-opacity-50 transition-opacity duration-300"
+            onClick={closeRoleDetail}
+          />
+        )}
 
       </div>
     </MainLayout>

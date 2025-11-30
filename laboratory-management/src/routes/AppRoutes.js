@@ -20,7 +20,7 @@ import TestOrderDetail from '../pages/admin/Tests/testOrderDetail';
 import { useAuth } from '../contexts/AuthContext';
 import ResetPassword from '../pages/Auth/resetPassword';
 import Configurations from '../pages/admin/Configurations';
-
+import ReagentsPage from '../pages/admin/Reagents';
 const AppRoutes = () => {
     const { user } = useAuth();
     return (
@@ -54,7 +54,7 @@ const AppRoutes = () => {
             />
             <Route
                 path="/patients"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_USER']}>
                     <Patients />
                 </ProtectedRoute>}
             />
@@ -77,19 +77,25 @@ const AppRoutes = () => {
             />
             <Route
                 path="/devices"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER', 'ROLE_LAB_USER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER', 'ROLE_LAB_USER','ROLE_SERVICE']}>
                     <Devices />
                 </ProtectedRoute>}
             />
             <Route
+                path="/reagents"
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER', 'ROLE_LAB_USER']}>
+                    <ReagentsPage />
+                </ProtectedRoute>}
+            />
+            <Route
                 path="/configurations"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_LAB_MANAGER']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN', 'ROLE_SERVICE']}>
                     <Configurations />
                 </ProtectedRoute>}
             />
             <Route
                 path="/users"
-                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN']}>
+                element={<ProtectedRoute allowedRoles={['ROLE_ADMIN','ROLE_LAB_MANAGER']}>
                     <Users />
                 </ProtectedRoute>}
             />

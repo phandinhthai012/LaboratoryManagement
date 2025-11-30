@@ -13,36 +13,28 @@ const EditConfigurationModal = ({ isOpen, onClose, configID, onUpdated }) => {
 
     // Form state
     const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        dataType: 'STRING',
-        value: '',
-        modificationReason: 'Điều chỉnh tham số phát hiện để tối ưu hiệu suất'
+        version: '',
+        modificationReason: 'Điều chỉnh tham số phát hiện để tối ưu hiệu suất',
+        settings: {}
     });
+    const [settingsInput, setSettingsInput] = useState('');
 
     // Initialize form data when config changes
     useEffect(() => {
         if (config) {
             setFormData({
-                name: config.name || '',
-                description: config.description || '',
-                dataType: config.dataType || 'STRING',
-                value: config.dataType === 'JSON' 
-                    ? (typeof config.value === 'string' ? config.value : JSON.stringify(config.value, null, 2))
-                    : (config.value?.toString() || ''),
-                modificationReason: 'Điều chỉnh tham số phát hiện để tối ưu hiệu suất'
+                version: config.version || '',
+                modificationReason: 'Điều chỉnh tham số phát hiện để tối ưu hiệu suất',
+                settings: config.settings || {}
             });
+            // Initialize settings input with formatted JSON
+            setSettingsInput(config.settings ? JSON.stringify(config.settings, null, 2) : '');
         }
     }, [config]);
 
     if (!isOpen || !config) return null;
 
-    const dataTypes = [
-        { value: 'STRING', label: 'Chuỗi (STRING)' },
-        { value: 'INTEGER', label: 'Số nguyên (INTEGER)' },
-        { value: 'BOOLEAN', label: 'Boolean (TRUE/FALSE)' },
-        { value: 'JSON', label: 'Đối tượng JSON' }
-    ];
+
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
@@ -52,46 +44,42 @@ const EditConfigurationModal = ({ isOpen, onClose, configID, onUpdated }) => {
     };
 
     const validateForm = () => {
-        const { name, description, dataType, value } = formData;
+        const { version, modificationReason } = formData;
         
-        if (!name.trim()) {
-            showNotification('Vui lòng nhập tên cấu hình', 'error');
+        if (!version.trim()) {
+            showNotification('Vui lòng nhập phiên bản', 'error');
             return false;
         }
         
-        if (!description.trim()) {
-            showNotification('Vui lòng nhập mô tả', 'error');
-            return false;
-        }
-        
-        if (!value.trim()) {
-            showNotification('Vui lòng nhập giá trị', 'error');
+        if (!modificationReason.trim()) {
+            showNotification('Vui lòng nhập lý do chỉnh sửa', 'error');
             return false;
         }
 
-        // Validate based on data type
-        if (dataType === 'INTEGER') {
-            if (isNaN(value) || !Number.isInteger(Number(value))) {
-                showNotification('Giá trị phải là số nguyên hợp lệ', 'error');
-                return false;
-            }
+        if (modificationReason.length > 255) {
+            showNotification('Lý do chỉnh sửa không được vượt quá 255 ký tự', 'error');
+            return false;
         }
         
-        if (dataType === 'BOOLEAN') {
-            const booleanValue = value.toLowerCase();
-            if (!['true', 'false', '1', '0'].includes(booleanValue)) {
-                showNotification('Giá trị Boolean phải là: true, false, 1 hoặc 0', 'error');
-                return false;
-            }
+        if (!settingsInput.trim()) {
+            showNotification('Vui lòng nhập cài đặt settings', 'error');
+            return false;
         }
-        
-        if (dataType === 'JSON') {
-            try {
-                JSON.parse(value);
-            } catch (error) {
-                showNotification('Giá trị JSON không hợp lệ', 'error');
+
+        // Validate settings JSON
+        try {
+            const parsedSettings = JSON.parse(settingsInput);
+            if (typeof parsedSettings !== 'object' || parsedSettings === null || Array.isArray(parsedSettings)) {
+                showNotification('Settings phải là một object JSON hợp lệ', 'error');
                 return false;
             }
+            if (Object.keys(parsedSettings).length === 0) {
+                showNotification('Settings không được để trống', 'error');
+                return false;
+            }
+        } catch (error) {
+            showNotification('Settings phải là JSON hợp lệ', 'error');
+            return false;
         }
 
         return true;
@@ -103,36 +91,32 @@ const EditConfigurationModal = ({ isOpen, onClose, configID, onUpdated }) => {
         if (!validateForm()) return;
         
         try {
-            // Process value based on data type
-            let processedValue = formData.value;
+            // Parse settings JSON
+            const parsedSettings = JSON.parse(settingsInput);
             
-            if (formData.dataType === 'INTEGER') {
-                processedValue = Number(formData.value);
-            } else if (formData.dataType === 'BOOLEAN') {
-                const boolValue = formData.value.toLowerCase();
-                processedValue = boolValue === 'true' || boolValue === '1';
-            } else if (formData.dataType === 'JSON') {
-                // Keep as string for JSON type
-                processedValue = formData.value;
-            }
-
             const payload = {
-                newValue:{
-                    ...formData,
-                    value: processedValue
-                },
-                modificationReason: formData.modificationReason || 'Cập nhật cấu hình hệ thống'
+                version: formData.version,
+                modificationReason: formData.modificationReason,
+                settings: parsedSettings
             };
 
             console.log('Updating configuration with payload:', payload);
             
-            // await modifyConfiguration(config.id, payload);
+            await modifyConfiguration({ configId: config.id, configData: payload });
             
-            // showNotification('Cập nhật cấu hình thành công!', 'success');
+            showNotification('Cập nhật cấu hình thành công!', 'success');
             
-            // // Callback
-            // onUpdated && onUpdated();
-            // onClose();
+            // Reset form
+            setFormData({
+                version: '',
+                modificationReason: 'Điều chỉnh tham số phát hiện để tối ưu hiệu suất',
+                settings: {}
+            });
+            setSettingsInput('');
+            
+            // Callback
+            onUpdated && onUpdated();
+            onClose();
             
         } catch (error) {
             console.error('Error updating configuration:', error);
@@ -141,51 +125,11 @@ const EditConfigurationModal = ({ isOpen, onClose, configID, onUpdated }) => {
         }
     };
 
-    const getValuePlaceholder = () => {
-        switch (formData.dataType) {
-            case 'STRING':
-                return 'Nhập chuỗi văn bản...';
-            case 'INTEGER':
-                return 'Nhập số nguyên (VD: 20)';
-            case 'BOOLEAN':
-                return 'Nhập true/false hoặc 1/0';
-            case 'JSON':
-                return 'Nhập JSON hợp lệ (VD: {"key": "value"})';
-            default:
-                return 'Nhập giá trị...';
-        }
-    };
 
-    const renderValueInput = () => {
-        if (formData.dataType === 'JSON') {
-            return (
-                <textarea
-                    value={formData.value}
-                    onChange={(e) => handleInputChange('value', e.target.value)}
-                    placeholder={getValuePlaceholder()}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-vertical font-mono text-sm"
-                    rows={6}
-                    required
-                />
-            );
-        }
-
-        return (
-            <input
-                type={formData.dataType === 'INTEGER' ? 'number' : 'text'}
-                value={formData.value}
-                onChange={(e) => handleInputChange('value', e.target.value)}
-                placeholder={getValuePlaceholder()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                required
-                {...(formData.dataType === 'INTEGER' && { step: '1' })}
-            />
-        );
-    };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
                 <div className="p-5">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-4">
@@ -213,85 +157,87 @@ const EditConfigurationModal = ({ isOpen, onClose, configID, onUpdated }) => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Name */}
+                        {/* Current Configuration Info */}
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h4 className="text-sm font-semibold text-blue-700 mb-2">Thông tin cấu hình hiện tại</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <span className="font-medium text-blue-600">Tên:</span>
+                                    <span className="ml-2 text-blue-900">{config.name}</span>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-blue-600">Loại:</span>
+                                    <span className="ml-2 text-blue-900">{config.configType}</span>
+                                </div>
+                                {config.instrumentModel && (
+                                    <div>
+                                        <span className="font-medium text-blue-600">Thiết bị:</span>
+                                        <span className="ml-2 text-blue-900">{config.instrumentModel}</span>
+                                    </div>
+                                )}
+                                <div>
+                                    <span className="font-medium text-blue-600">Phiên bản hiện tại:</span>
+                                    <span className="ml-2 text-blue-900">v{config.version}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Version */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Tên cấu hình *
+                                Phiên bản mới *
                             </label>
                             <input
                                 type="text"
-                                value={formData.name}
-                                onChange={(e) => handleInputChange('name', e.target.value)}
-                                placeholder="VD: Chính sách khóa tài khoản"
+                                value={formData.version}
+                                onChange={(e) => handleInputChange('version', e.target.value)}
+                                placeholder="VD: 1.0.2, 2.1.0"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                 required
                             />
-                        </div>
-
-                        {/* Description */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Mô tả *
-                            </label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) => handleInputChange('description', e.target.value)}
-                                placeholder="VD: Tính năng bảo mật này được kích hoạt khi người dùng nhập sai mật khẩu nhiều lần."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-vertical"
-                                rows={3}
-                                required
-                            />
-                        </div>
-
-                        {/* Data Type */}
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Kiểu dữ liệu *
-                            </label>
-                            <select
-                                value={formData.dataType}
-                                onChange={(e) => handleInputChange('dataType', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                required
-                            >
-                                {dataTypes.map(type => (
-                                    <option key={type.value} value={type.value}>
-                                        {type.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <p className="text-xs text-amber-600 mt-1">
-                                ⚠️ Thay đổi kiểu dữ liệu có thể ảnh hưởng đến giá trị hiện tại
+                            <p className="text-xs text-gray-500 mt-1">
+                                Nên tăng version khi có thay đổi (VD: từ 1.0.1 → 1.0.2)
                             </p>
                         </div>
 
-                        {/* Value */}
+                        {/* Settings */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Giá trị *
+                                Cài đặt Settings *
                             </label>
-                            {renderValueInput()}
-                            {formData.dataType === 'JSON' && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Nhập JSON hợp lệ. VD: {`{"timeout": 300, "enabled": true}`}
-                                </p>
-                            )}
+                            <textarea
+                                value={settingsInput}
+                                onChange={(e) => setSettingsInput(e.target.value)}
+                                placeholder={`{
+  "protocol": "ASTM",
+  "baudRate": 9600,
+  "timeout": 10000
+}`}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-vertical font-mono text-sm"
+                                rows={8}
+                                required
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Nhập JSON object hợp lệ cho cài đặt cấu hình
+                            </p>
                         </div>
 
                         {/* Modification Reason */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Lý do chỉnh sửa
+                                Lý do chỉnh sửa *
                             </label>
                             <input
                                 type="text"
                                 value={formData.modificationReason}
                                 onChange={(e) => handleInputChange('modificationReason', e.target.value)}
-                                placeholder="VD: Điều chỉnh tham số phát hiện để tối ưu hiệu suất"
+                                placeholder="VD: Tăng thời gian timeout do kết nối chập chờn"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                maxLength={255}
+                                required
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                                Ghi chú lý do thay đổi cấu hình này
+                                Ghi chú lý do thay đổi cấu hình này (tối đa 255 ký tự)
                             </p>
                         </div>
 

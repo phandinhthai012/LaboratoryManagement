@@ -59,7 +59,7 @@ const CreateTestTypeModal = ({ isOpen, onClose, onCreated }) => {
             });
             
             // Gọi callback với dữ liệu test type mới tạo
-            onCreated && onCreated(result?.data || result);
+            onCreated && onCreated(result||result?.data );
             
             onClose();
         } catch (error) {
