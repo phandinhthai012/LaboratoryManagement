@@ -26,6 +26,36 @@ const CreateTestTypeModal = ({ isOpen, onClose, onCreated }) => {
     const testParameters = paramsRes?.data?.values || [];
     console.log('Loaded test parameters:', testParameters);
 
+    const reagentOptions = [
+        { value: '', label: '-- Chọn thuốc thử --' },
+        { value: 'Diluent', label: 'Diluent', min: 1, max: 2 },
+        { value: 'Lysing', label: 'Lysing', min: 50, max: 200 },
+        { value: 'Staining', label: 'Staining', min: 50, max: 100 },
+        { value: 'Clotting Agent', label: 'Clotting Agent', min: 50, max: 100 },
+        { value: 'Cleaner', label: 'Cleaner', min: 1, max: 2 },
+    ];
+
+    // Get selected reagent info
+    const selectedReagent = reagentOptions.find(option => option.value === formData.reagentName);
+    
+    // Volume validation
+    const validateVolume = () => {
+        if (!selectedReagent || !selectedReagent.min || !selectedReagent.max) return null;
+        
+        if (formData.requiredVolume < selectedReagent.min) {
+            return `Thể tích tối thiểu cho ${selectedReagent.label} là ${selectedReagent.min} mL`;
+        }
+        
+        if (formData.requiredVolume > selectedReagent.max) {
+            return `Thể tích tối đa cho ${selectedReagent.label} là ${selectedReagent.max} mL`;
+        }
+        
+        return null;
+    };
+    
+    const volumeError = validateVolume();
+
+
     const handleCheckboxChange = (paramId) => {
         setFormData(prev => {
             const currentIds = prev.testParameterIds;
@@ -41,6 +71,17 @@ const CreateTestTypeModal = ({ isOpen, onClose, onCreated }) => {
         e.preventDefault();
         if (formData.testParameterIds.length === 0) {
             showNotification('Vui lòng chọn ít nhất 1 thông số', 'warning');
+            return;
+        }
+        
+        if (!formData.reagentName) {
+            showNotification('Vui lòng chọn thuốc thử', 'warning');
+            return;
+        }
+        
+        const volumeValidationError = validateVolume();
+        if (volumeValidationError) {
+            showNotification(volumeValidationError, 'warning');
             return;
         }
         console.log('Submitting form data:', formData);
@@ -99,20 +140,39 @@ const CreateTestTypeModal = ({ isOpen, onClose, onCreated }) => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Thể tích (mL)</label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Thể tích (mL)
+                                    {selectedReagent && selectedReagent.min && selectedReagent.max && (
+                                        <span className="text-xs text-gray-500 ml-1">
+                                            ({selectedReagent.min} - {selectedReagent.max} mL)
+                                        </span>
+                                    )}
+                                </label>
                                 <input 
                                     type="number" 
                                     step="0.1"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    min={selectedReagent?.min || 0}
+                                    max={selectedReagent?.max || 1000}
+                                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:border-transparent transition-all ${
+                                        volumeError 
+                                            ? 'border-red-300 focus:ring-red-500' 
+                                            : 'border-gray-300 focus:ring-blue-500'
+                                    }`}
                                     value={formData.requiredVolume}
                                     onChange={e => setFormData({...formData, requiredVolume: Number(e.target.value)})}
                                     placeholder="0.0"
                                 />
+                                {volumeError && (
+                                    <p className="mt-1 text-xs text-red-600">{volumeError}</p>
+                                )}
+                                {selectedReagent && !volumeError && formData.requiredVolume > 0 && (
+                                    <p className="mt-1 text-xs text-green-600">✓ Thể tích phù hợp</p>
+                                )}
                             </div>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-3">
-                            <div>
+                            {/* <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Thuốc thử</label>
                                 <input 
                                     type="text" 
@@ -121,6 +181,24 @@ const CreateTestTypeModal = ({ isOpen, onClose, onCreated }) => {
                                     onChange={e => setFormData({...formData, reagentName: e.target.value})}
                                     placeholder="Tên thuốc thử"
                                 />
+                            </div> */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Thuốc thử
+                                    <span className="text-red-500 ml-1">*</span>
+                                </label>
+                                <select 
+                                    required
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white"
+                                    value={formData.reagentName}
+                                    onChange={e => setFormData({...formData, reagentName: e.target.value})}
+                                >
+                                    {reagentOptions.map(option => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">Mô tả</label>
@@ -133,6 +211,23 @@ const CreateTestTypeModal = ({ isOpen, onClose, onCreated }) => {
                                 />
                             </div>
                         </div>
+                        {formData.reagentName && selectedReagent && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                        <span className="text-sm font-medium text-blue-800">
+                                            Thuốc thử đã chọn: <span className="font-semibold">{formData.reagentName}</span>
+                                        </span>
+                                    </div>
+                                    {selectedReagent.min && selectedReagent.max && (
+                                        <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                            Thể tích: {selectedReagent.min} - {selectedReagent.max} mL
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Chọn thông số */}
                         <div>
@@ -177,7 +272,7 @@ const CreateTestTypeModal = ({ isOpen, onClose, onCreated }) => {
                             </button>
                             <button 
                                 type="submit" 
-                                disabled={loading || formData.testParameterIds.length === 0}
+                                disabled={loading || formData.testParameterIds.length === 0 || volumeError || !formData.reagentName}
                                 className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center gap-2"
                             >
                                 {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}

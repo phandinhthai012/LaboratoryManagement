@@ -58,8 +58,8 @@ const useInstrument = () => {
             return response.data;
         },
         onSuccess: async (data) => {
+            await queryClient.invalidateQueries({ queryKey: ['warehouse', 'instruments'] });
             showNotification('Thay đổi chế độ thiết bị thành công', 'success');
-            await queryClient.invalidateQueries({ queryKey: ['instruments'] });
         },
         onError: (error) => {
             showNotification(`Thay đổi chế độ thiết bị thất bại: ${error.message}`, 'error');

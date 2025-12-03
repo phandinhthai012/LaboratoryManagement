@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, use } from 'react';
 import { FaSearch, FaEye, FaCog, FaTools, FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaSync, FaPlay, FaPause, FaPlus } from 'react-icons/fa';
 import MainLayout from '../../../layouts/MainLayout';
 import { useAllInstruments, useWareHouse } from '../../../hooks/useWareHouse';
@@ -6,10 +6,12 @@ import StatisticCard from './component/StatisticCard';
 import ModalAddInstrument from './component/ModalAddInstrument';
 import ModalCheckStatus from './component/ModalCheckStatus';
 import ModalActivateDeactivate from './component/ModalActivateDeactivate';
+import ModalChangeMode from './component/ModelChangeMode';
+import useInstrument from '../../../hooks/useInstrument';
 const Devices = () => {
   const { data: instrumentsResponse, isLoading, error, refetch } = useAllInstruments();
-  const { 
-    addInstrument, 
+  const {
+    addInstrument,
     isAddingInstrument,
     checkInstrumentStatus,
     isCheckingInstrumentStatus,
@@ -19,6 +21,8 @@ const Devices = () => {
     isDeactivatingInstrument,
   } = useWareHouse();
   // Removed API calls - using alerts instead
+
+  const { changeInstrumentMode,isLoadingChangeInstrumentMode} = useInstrument();
 
   // Get instruments from API response
   const instruments = instrumentsResponse ? instrumentsResponse.data : [];
@@ -37,17 +41,25 @@ const Devices = () => {
   // check status modal state
   const [checkStatusModalOpen, setCheckStatusModalOpen] = useState(false);
   const [selectedInstrumentStatus, setSelectedInstrumentStatus] = useState({
-      instrumentId: null,
-      instrumentName: null,
+    instrumentId: null,
+    instrumentName: null,
   });
 
   // activate/deactivate modal state
   const [activateDeactivateModalOpen, setActivateDeactivateModalOpen] = useState(false);
   const [selectedInstrumentActivateDeactivate, setSelectedInstrumentActivateDeactivate] = useState({
-      instrumentId: null,
-      instrumentName: null,
-      actionType: null
-  }); 
+    instrumentId: null,
+    instrumentName: null,
+    actionType: null
+  });
+
+  // change mode modal state
+  const [changeModeModalOpen, setChangeModeModalOpen] = useState(false);
+  const [selectedInstrumentChangeMode, setSelectedInstrumentChangeMode] = useState({
+    instrumentId: null,
+    instrumentName: null,
+    currentMode: null
+  });
 
 
   // Calculate statistics from API data
@@ -94,6 +106,24 @@ const Devices = () => {
       case 'MAINTENANCE': return 'Bảo trì';
       case 'PROCESSING': return 'Đang xử lý';
       default: return 'Không xác định';
+    }
+  };
+
+  const getModeColor = (mode) => {
+    switch (mode) {
+      case 'READY': return 'bg-green-100 text-green-800 border-green-200';
+      case 'MAINTENANCE': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'INACTIVE': return 'bg-gray-100 text-gray-600 border-gray-200';
+      default: return 'bg-gray-100 text-gray-600 border-gray-200';
+    }
+  };
+
+  const getModeIcon = (mode) => {
+    switch (mode) {
+      case 'READY': return <FaCheckCircle />;
+      case 'MAINTENANCE': return <FaTools />;
+      case 'INACTIVE': return <FaTimesCircle />;
+      default: return <FaCog />;
     }
   };
 
@@ -195,7 +225,41 @@ const Devices = () => {
     } catch (error) {
       console.error(`Error ${data.actionType} instrument:`, error);
     }
-  }
+  };
+
+  // handle change mode modal
+  const openChangeModeModal = (instrumentId, instrumentName, currentMode) => {
+    setSelectedInstrumentChangeMode({
+      instrumentId,
+      instrumentName,
+      currentMode
+    });
+    setChangeModeModalOpen(true);
+  };
+
+  const closeChangeModeModal = () => {
+    setChangeModeModalOpen(false);
+    setSelectedInstrumentChangeMode({
+      instrumentId: null,
+      instrumentName: null,
+      currentMode: null
+    });
+  };
+
+  const handleSubmitChangeMode = async (data) => {
+    if (!data.instrumentId || !data.newMode || !data.reason) return;
+    try {
+      // Tạo payload theo format yêu cầu
+      const payload = {
+        newMode: data.newMode,
+        reason: data.reason
+      };
+      await changeInstrumentMode({instrumentCode: data.instrumentId, modeData: payload});
+      // await refetch(); // Refresh data
+    } catch (error) {
+      console.error('Error changing mode:', error);
+    }
+  };
 
   // Status options for filter
   const statusOptions = ['Tất cả trạng thái', 'READY', 'ERROR', 'INACTIVE', 'MAINTENANCE', 'PROCESSING'];
@@ -408,6 +472,9 @@ const Devices = () => {
                     Trạng thái
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Chế độ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Lần cập nhật cuối
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -418,7 +485,7 @@ const Devices = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredInstruments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                       <div className="flex flex-col items-center">
                         <FaExclamationTriangle className="w-12 h-12 text-gray-300 mb-4" />
                         <p className="text-lg font-medium text-gray-900">Không tìm thấy thiết bị</p>
@@ -429,7 +496,7 @@ const Devices = () => {
                 ) : (
                   paginatedInstruments.map((instrument) => (
                     <tr key={instrument.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         {instrument.id}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
@@ -447,6 +514,12 @@ const Devices = () => {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(instrument.status)}`}>
                           {getStatusIcon(instrument.status)}
                           <span className="ml-1">{getStatusText(instrument.status)}</span>
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getModeColor(instrument.mode)}`}>
+                          {getModeIcon(instrument.mode)}
+                          <span className="ml-1">{instrument.mode}</span>
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -481,6 +554,13 @@ const Devices = () => {
                               <FaPause className="w-4 h-4" />
                             </button>
                           )}
+                          <button
+                            onClick={() => openChangeModeModal(instrument.id, instrument.name, instrument.mode)}
+                            className="text-purple-600 hover:text-purple-900 p-1"
+                            title="Thay đổi chế độ"
+                          >
+                            <FaCog className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => toggleDetails(instrument.id)}
                             className="text-gray-600 hover:text-gray-900 p-1"
@@ -561,6 +641,15 @@ const Devices = () => {
           instrumentName={selectedInstrumentActivateDeactivate.instrumentName}
           actionType={selectedInstrumentActivateDeactivate.actionType}
         />
+        <ModalChangeMode
+          isOpen={changeModeModalOpen}
+          onClose={closeChangeModeModal}
+          isLoading={isLoadingChangeInstrumentMode} 
+          onSubmit={handleSubmitChangeMode}
+          instrumentId={selectedInstrumentChangeMode.instrumentId}
+          instrumentName={selectedInstrumentChangeMode.instrumentName}
+          currentMode={selectedInstrumentChangeMode.currentMode}
+        />
         {/* Instrument Detail Cards */}
         {filteredInstruments.map((instrument) => (
           showDetails[instrument.id] && (
@@ -601,6 +690,11 @@ const Devices = () => {
                           {getStatusIcon(instrument.status)}
                           <span className="ml-1">{getStatusText(instrument.status)}</span>
                         </span>
+                        <span className="ml-4 font-medium">Chế độ:</span>
+                        <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs ${getModeColor(instrument.mode)}`}>
+                          {getModeIcon(instrument.mode)}
+                          <span className="ml-1">{instrument.mode}</span>
+                        </span>     
                       </div>
                       <div>
                         <span className="font-medium">Cập nhật cuối:</span>
@@ -651,13 +745,13 @@ const Devices = () => {
                     <h4 className="text-sm font-medium text-gray-500 mb-2">Thao tác</h4>
                     <div className="flex flex-col space-y-2">
                       <button
-                        onClick={()=>openCheckStatusModal(instrument.id, instrument.name)}
+                        onClick={() => openCheckStatusModal(instrument.id, instrument.name)}
                         className="flex items-center justify-center px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200"
                       >
                         <FaSync className="w-4 h-4 mr-2" />
                         Kiểm tra trạng thái
                       </button>
-                          {!instrument.active || instrument.status === 'INACTIVE' || instrument.status === 'ERROR' ? (
+                      {!instrument.active || instrument.status === 'INACTIVE' || instrument.status === 'ERROR' ? (
                         <button
                           onClick={() => handleActivateInstrument(instrument.id)}
                           className="flex items-center justify-center px-3 py-2 text-sm bg-green-100 text-green-700 rounded-md hover:bg-green-200"

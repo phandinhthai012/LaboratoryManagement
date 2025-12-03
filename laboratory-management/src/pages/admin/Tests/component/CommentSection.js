@@ -11,15 +11,18 @@ const CommentSection = ({ isOpen, onClose, targetId, targetType, onCommentAdded,
 
     if (!isOpen) return null;
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!newComment.trim()) return;
         const payload = {
             targetId,
             targetType,
             content: newComment.trim(),
         };
-        if (typeof onCommentAdded === 'function') onCommentAdded(payload);
-        setNewComment('');
+        if (typeof onCommentAdded === 'function') {
+            setNewComment('');
+            await onCommentAdded(payload);
+        }
+        
         if (typeof onClose === 'function') onClose();
     };
 

@@ -13,8 +13,9 @@ const instrumentService = {
     },
     changeInstrumentMode: async (instrumentCode, modeData) => {
         try {
+            console.log('Changing mode for instrument:', instrumentCode, 'with data:', modeData);
             const endpoint = API_ENDPOINTS.INSTRUMENT.CHANGE_INSTRUMENT_MODE(instrumentCode);
-            const response = await apiClient.post(endpoint, modeData);
+            const response = await apiClient.patch(endpoint, modeData);
             return response.data;
         }
         catch (error) {

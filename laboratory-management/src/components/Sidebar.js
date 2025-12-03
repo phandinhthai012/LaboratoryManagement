@@ -81,14 +81,14 @@ const Sidebar = () => {
             </div>
           )}
           {/* Quản lý dịch vụ: ROLE_ADMIN, ROLE_SERVICE, ROLE_LAB_MANAGER */}
-          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_SERVICE' || user.roleCode === 'ROLE_LAB_MANAGER') && (
+          {/* {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_SERVICE' || user.roleCode === 'ROLE_LAB_MANAGER') && (
             <div
               className={`flex items-center gap-3 py-2 px-3 rounded-lg text-gray-800 font-medium text-sm cursor-pointer ${activeTab === 'services' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}
               onClick={() => navigate('/services')}
             >
               <FaServicestack className="w-5 h-5" /> Quản Lý Dịch Vụ
             </div>
-          )}
+          )} */}
           {/* Quản lý thiết bị: ROLE_ADMIN, ROLE_LAB_MANAGER, ROLE_LAB_USER */}
           {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_LAB_MANAGER' || user.roleCode === 'ROLE_LAB_USER') && (
             <div
@@ -126,14 +126,14 @@ const Sidebar = () => {
             </div>
           )}
           {/* Báo cáo & phân tích: ROLE_ADMIN, ROLE_LAB_MANAGER */}
-          {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_LAB_MANAGER') && (
+          {/* {(user.roleCode === 'ROLE_ADMIN' || user.roleCode === 'ROLE_LAB_MANAGER') && (
             <div
               className={`flex items-center gap-3 py-2 px-3 rounded-lg  text-gray-800 font-medium text-sm  cursor-pointer ${activeTab === 'reports' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}
               onClick={() => navigate('/reports')}
             >
               <FaFileAlt className="w-5 h-5" /> Báo Cáo & Phân Tích
             </div>
-          )}
+          )} */}
           {/* profile */}
           <div
             className={`flex items-center gap-3 py-2 px-3 rounded-lg  text-gray-800 font-medium text-sm cursor-pointer ${activeTab === 'profile' ? 'bg-gray-900 text-white font-semibold' : 'hover:bg-gray-100 text-gray-800 font-medium'}`}

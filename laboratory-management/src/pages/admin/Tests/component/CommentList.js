@@ -11,6 +11,7 @@ const CommentList = ({
     setComments,
 
 }) => {
+    console.log('Rendering CommentList with comments:', comments);
     const { user } = useAuth();
     const [showReplyForm, setShowReplyForm] = useState({});
     const [replyContent, setReplyContent] = useState('');
@@ -70,7 +71,7 @@ const CommentList = ({
                 <div className="p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                     <div className="flex justify-between items-start mb-2">
                         <div className="text-sm text-gray-600">
-                            <span className="font-medium text-gray-800">{comment?.author?.fullName}</span>
+                            <span className="font-medium text-gray-800">{comment?.createdBy?.fullName || 'Unknown User'}</span>
                             <span className="mx-2">•</span>
                             <span>{formatDate(comment.createdAt)}</span>
                             {comment.targetInfo?.targetType === 'RESULT' && (
@@ -83,7 +84,7 @@ const CommentList = ({
                             )}
                         </div>
                         <div className="flex items-center space-x-2">
-                            {comment?.author?.roles?.includes('Administrator') && (
+                            {comment?.createdBy?.roles?.includes('Administrator') && (
                                 <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
                                     Admin
                                 </span>
@@ -96,7 +97,7 @@ const CommentList = ({
                                 {showReplyForm[comment?.id] ? 'Hủy phản hồi' : 'Phản hồi'}
                             </button>
                             {/* You can add delete button here if needed */}
-                            {user?.userId === comment.author?.id && (
+                            {user?.userId === comment.createdBy?.userId && (
                                 <button
                                     onClick={() => {
                                         console.log('Delete comment ID:', comment.id);
@@ -120,17 +121,17 @@ const CommentList = ({
                             <div key={reply?.id || index} className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-300">
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="text-sm text-gray-600">
-                                        <span className="font-medium text-gray-800">{reply?.author?.fullName}</span>
+                                        <span className="font-medium text-gray-800">{reply?.createdBy?.fullName || 'Unknown User'}</span>
                                         <span className="mx-2">•</span>
                                         <span>{formatDate(reply.createdAt)}</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                        {reply?.author?.roles?.includes('Administrator') && (
+                                        {reply?.createdBy?.roles?.includes('Administrator') && (
                                             <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
                                                 Admin
                                             </span>
                                         )}
-                                        {user?.userId === reply.author?.id && (
+                                        {user?.userId === reply.createdBy?.userId && (
                                             <button
                                                 onClick={() => {
                                                     console.log('Delete reply ID:', reply.id);
@@ -155,7 +156,7 @@ const CommentList = ({
                 {showReplyForm[comment?.id] && (
                     <div className="ml-8 p-3 bg-blue-50 rounded-lg border border-blue-200">
                         <h4 className="font-medium mb-2 text-sm text-gray-700">
-                            Phản hồi cho {comment?.author?.fullName}:
+                            Phản hồi cho {comment?.createdBy?.fullName || 'Unknown User'}:
                         </h4>
                         <textarea
                             value={replyContent}
