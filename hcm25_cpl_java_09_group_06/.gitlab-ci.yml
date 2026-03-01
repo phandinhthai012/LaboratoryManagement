@@ -1,0 +1,62 @@
+stages:
+  - build
+  - push
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+
+before_script:
+  - docker login -u "$DOCKERHUB_USERNAME" -p "$DOCKERHUB_PASSWORD"
+
+# ==============================
+# BUILD IMAGE CHO TỪNG SERVICE
+# ==============================
+build_services:
+  stage: build
+  script:
+    - docker build -t $DOCKERHUB_USERNAME/gateway_service:latest gateway_service
+    - docker build -t $DOCKERHUB_USERNAME/iam_service:latest iam_service
+    - docker build -t $DOCKERHUB_USERNAME/patient_service:latest patient_service
+    - docker build -t $DOCKERHUB_USERNAME/test_order_service:latest test_order_service
+    - docker build -t $DOCKERHUB_USERNAME/warehouse_service:latest warehouse_service
+    - docker build -t $DOCKERHUB_USERNAME/instrument_service:latest instrument_service
+    - docker build -t $DOCKERHUB_USERNAME/monitoring_service:latest monitoring_service
+  only:
+    - deploy
+
+# ==============================
+# PUSH IMAGE LÊN DOCKER HUB
+# ==============================
+push_services:
+  stage: push
+  script:
+    - docker push $DOCKERHUB_USERNAME/gateway_service:latest
+    - docker push $DOCKERHUB_USERNAME/iam_service:latest
+    - docker push $DOCKERHUB_USERNAME/patient_service:latest
+    - docker push $DOCKERHUB_USERNAME/test_order_service:latest
+    - docker push $DOCKERHUB_USERNAME/warehouse_service:latest
+    - docker push $DOCKERHUB_USERNAME/instrument_service:latest
+    - docker push $DOCKERHUB_USERNAME/monitoring_service:latest
+  only:
+    - deploy
+
+# ==============================
+# DEPLOY TRÊN EC2
+# ==============================
+deploy_to_ec2:
+  stage: deploy
+  before_script:
+    - apk add openssh-client
+  script:
+    - echo "$SSH_KEY" > id_rsa
+    - chmod 600 id_rsa
+
+    - ssh -o StrictHostKeyChecking=no -i id_rsa $SSH_USER@$SSH_HOST "
+        cd ~/deploy &&
+        docker compose pull &&
+        docker compose up -d &&
+        docker system prune -f
+      "
+  only:
+    - deploy
